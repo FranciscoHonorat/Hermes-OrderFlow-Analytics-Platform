@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/FranciscoHonorat/ordemflow/application/command"
+	"github.com/FranciscoHonorat/ordemflow/services/order-service/application/command"
 	"github.com/gin-gonic/gin"
 )
 

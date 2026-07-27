@@ -1,9 +1,9 @@
 module github.com/FranciscoHonorat/ordemflow/services/order-service
 
-go 1.24.4
+go 1.25.0
 
 require (
-	github.com/FranciscoHonorat/ordemflow/shared v0.0.0-20260619192135-a8d38c1b9aef
+	github.com/FranciscoHonorat/ordemflow/shared v0.0.0-20260725001010-dbf7b53670e8
 	github.com/gin-gonic/gin v1.12.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/google/uuid v1.6.0

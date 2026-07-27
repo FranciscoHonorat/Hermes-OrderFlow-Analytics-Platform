@@ -31,7 +31,7 @@ return &PlaceOrderHandler{
     }
 }
 
-func (h *PlaceOrderHandle) Handle(ctx context.Context, cmd PlaceOrderCommand) (PlaceOrderResult, error) {
+func (h *PlaceOrderHandler) Handle(ctx context.Context, cmd PlaceOrderCommand) (PlaceOrderResult, error) {
 	id, err := uuid.Parse(cmd.CustomerID)
 	if err != nil {
 		return PlaceOrderResult{}, err

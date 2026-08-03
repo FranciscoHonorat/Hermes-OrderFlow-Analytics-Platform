@@ -29,14 +29,14 @@ func NewOrder(id valueobject.OrderID, customerID valueobject.CustomerID) (*Order
 	if customerID.IsZero() {
 		return nil, domainErrors.ErrInvalidCustomerID
 	}
-
+	now := time.Now().UTC()
 	return &Order{
 		id:         id,
 		customerID: customerID,
 		items:      []valueobject.OrderItem{},
 		status:     valueobject.OrderStatusPending,
-		createdAt:  time.Now(),
-		updatedAt:  time.Now(),
+		createdAt:  now,
+		updatedAt:  now,
 	}, nil
 }
 
@@ -94,7 +94,7 @@ func (o *Order) UpdateStatus(newStatus valueobject.OrderStatus) error {
 	return nil
 }
 
-func (o *Order) Place() error {
+func (o *Order) Place(now time.Time) error {
 	if !o.status.IsValid() {
 		return domainErrors.ErrCorruptedOrder
 	}
@@ -106,14 +106,14 @@ func (o *Order) Place() error {
 	}
 
 	o.status = valueobject.OrderStatusPlaced
-	o.updatedAt = time.Now().UTC()
+	o.updatedAt = now.UTC()
 
-	evt := event.NewOrderPlaced(o.id.String(), o.customerID.String(), o.totalPrice, len(o.items))
+	evt := event.NewOrderPlaced(o.id.String(), o.customerID.String(), o.totalPrice, len(o.items), now)
 	o.addEvent(evt)
 	return nil
 }
 
-func (o *Order) Cancel(reason string) error {
+func (o *Order) Cancel(now time.Time, reason string) error {
 	if !o.status.IsValid() {
 		return domainErrors.ErrCorruptedOrder
 	}
@@ -122,9 +122,9 @@ func (o *Order) Cancel(reason string) error {
 	}
 
 	o.status = valueobject.OrderStatusCancelled
-	o.updatedAt = time.Now().UTC()
+	o.updatedAt = now.UTC()
 
-	evt := event.NewOrderCancelled(o.id.String(), o.customerID.String(), reason)
+	evt := event.NewOrderCancelled(o.id.String(), o.customerID.String(), reason, now)
 	o.addEvent(evt)
 	return nil
 }
@@ -137,6 +137,13 @@ func (o *Order) DomainEvents() []event.DomainEvent {
 	cp := make([]event.DomainEvent, len(o.events))
 	copy(cp, o.events)
 	return cp
+}
+
+func (o *Order) PullEvents() []event.DomainEvent {
+	events := o.DomainEvents()
+	o.ClearEvents()
+	return events
+
 }
 
 func (o *Order) ClearEvents() {

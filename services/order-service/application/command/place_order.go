@@ -6,8 +6,8 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/FranciscoHonorat/ordemflow/services/order-service/application/port/output"
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/domain/entity"
-	"github.com/FranciscoHonorat/ordemflow/services/order-service/domain/repository"
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/domain/valueobject"
 )
 
@@ -28,16 +28,22 @@ type PlaceOrderResult struct {
 }
 
 type PlaceOrderHandler struct {
-	orders repository.OrderRepository
+	uow   output.UnitOfWork
+	clock output.Clock
 }
 
-func NewPlaceOrderHandler(orders repository.OrderRepository) *PlaceOrderHandler {
+func NewPlaceOrderHandler(uow output.UnitOfWork, clock output.Clock) *PlaceOrderHandler {
 	return &PlaceOrderHandler{
-		orders: orders,
+		uow:   uow,
+		clock: clock,
 	}
 }
 
 func (h *PlaceOrderHandler) Handle(ctx context.Context, cmd PlaceOrderCommand) (PlaceOrderResult, error) {
+	now := h.clock.Now()
+	if len(cmd.Items) == 0 {
+		return PlaceOrderResult{}, fmt.Errorf("place order: order must contain at least one item")
+	}
 	id, err := uuid.Parse(cmd.CustomerID)
 	if err != nil {
 		return PlaceOrderResult{}, err
@@ -60,8 +66,14 @@ func (h *PlaceOrderHandler) Handle(ctx context.Context, cmd PlaceOrderCommand) (
 		}
 
 		productID, err := valueobject.NewProductID(productUUID)
+		if err != nil {
+			return PlaceOrderResult{}, fmt.Errorf("place order: item %d: %w", i, err)
+		}
 
 		quantity, err := valueobject.NewQuantity(in.Quantity)
+		if err != nil {
+			return PlaceOrderResult{}, fmt.Errorf("place order: item %d: %w", i, err)
+		}
 
 		item, err := valueobject.NewOrderItem(productID, price, quantity)
 		if err != nil {
@@ -80,7 +92,30 @@ func (h *PlaceOrderHandler) Handle(ctx context.Context, cmd PlaceOrderCommand) (
 		return PlaceOrderResult{}, err
 	}
 
-	if err := h.orders.Save(ctx, order); err != nil {
+	for _, item := range items {
+		if err := order.AddItem(item); err != nil {
+			return PlaceOrderResult{}, err
+		}
+	}
+
+	if err := order.Place(now); err != nil {
+		return PlaceOrderResult{}, fmt.Errorf("place order %w", err)
+	}
+
+	err = h.uow.Do(ctx, func(store output.RepositoryProvider) error {
+		if err := store.OrderRepository().Save(ctx, order); err != nil {
+			return fmt.Errorf("failed to save order: %w", err)
+		}
+
+		if events := order.PullEvents(); len(events) > 0 {
+			if err := store.OutboxRepository().SaveEvents(ctx, events); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
 		return PlaceOrderResult{}, err
 	}
 

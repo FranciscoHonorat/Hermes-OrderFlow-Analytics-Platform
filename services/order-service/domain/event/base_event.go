@@ -14,10 +14,10 @@ type BaseEvent struct {
 	aggregateId string
 }
 
-func NewBaseEvent(name, aggregateId string) BaseEvent {
+func NewBaseEvent(name, aggregateId string, occurredAt time.Time) BaseEvent {
 	return BaseEvent{
 		eventName:   name,
-		occurredAt:  time.Now().UTC(),
+		occurredAt:  occurredAt,
 		aggregateId: aggregateId,
 	}
 }

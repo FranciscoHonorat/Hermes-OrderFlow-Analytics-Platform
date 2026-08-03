@@ -1,6 +1,12 @@
 package event
 
-import "github.com/FranciscoHonorat/ordemflow/services/order-service/domain/valueobject"
+import (
+	"time"
+
+	"github.com/FranciscoHonorat/ordemflow/services/order-service/domain/valueobject"
+)
+
+var _ DomainEvent = (*OrderPlaced)(nil)
 
 type OrderAdded struct {
 	BaseEvent
@@ -11,9 +17,9 @@ type OrderAdded struct {
 	TotalPrice valueobject.Money
 }
 
-func NewOrderAdded(orderID valueobject.OrderID, productID valueobject.ProductID, quantity valueobject.Quantity, unitPrice, totalPrice valueobject.Money) OrderAdded {
+func NewOrderAdded(orderID valueobject.OrderID, productID valueobject.ProductID, quantity valueobject.Quantity, unitPrice, totalPrice valueobject.Money, occurredAt time.Time) OrderAdded {
 	return OrderAdded{
-		BaseEvent:  NewBaseEvent("order.item_added", orderID.String()),
+		BaseEvent:  NewBaseEvent("order.item_added", orderID.String(), occurredAt),
 		OrderID:    orderID,
 		ProductID:  productID,
 		Quantity:   quantity,

@@ -15,7 +15,6 @@ type ConfirmOrderResult struct {
 }
 
 type ConfirmOrderHandler struct {
-	orders    repository.OrderRepository
-	uow       output.UnitOfWork
-	publisher output.EventPublisher
+	orders repository.OrderRepository
+	uow    output.UnitOfWork
 }

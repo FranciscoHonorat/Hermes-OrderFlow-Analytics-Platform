@@ -1,8 +1,0 @@
-load("@rules_go//go:def.bzl", "go_library")
-
-go_library(
-    name = "valueobject",
-    srcs = ["money.go"],
-    importpath = "github.com/FranciscoHonorat/ordemflow/services/order-service/domain/valueobject",
-    visibility = ["//visibility:public"],
-)

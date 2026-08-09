@@ -113,6 +113,22 @@ func (o *Order) Place(now time.Time) error {
 	return nil
 }
 
+func (o *Order) Confirm(now time.Time) error {
+	if !o.status.IsValid() {
+		return domainErrors.ErrCorruptedOrder
+	}
+	if o.status != valueobject.OrderStatusPlaced {
+		return domainErrors.ErrOrderNotPlaced
+	}
+
+	o.status = valueobject.OrderStatusConfirmed
+	o.updatedAt = now.UTC()
+
+	evt := event.NewOrderConfirmed(o.id.String(), now)
+	o.addEvent(evt)
+	return nil
+}
+
 func (o *Order) Cancel(now time.Time, reason string) error {
 	if !o.status.IsValid() {
 		return domainErrors.ErrCorruptedOrder
@@ -144,6 +160,22 @@ func (o *Order) PullEvents() []event.DomainEvent {
 	o.ClearEvents()
 	return events
 
+}
+
+func (o *Order) Ship(now time.Time) error {
+	if !o.status.IsValid() {
+		return domainErrors.ErrCorruptedOrder
+	}
+	if o.status != valueobject.OrderStatusConfirmed {
+		return domainErrors.ErrOrderAlreadyShipped
+	}
+
+	o.status = valueobject.OrderStatusShipped
+	o.updatedAt = now.UTC()
+
+	evt := event.NewOrderShipped(o.id.String(), now)
+	o.addEvent(evt)
+	return nil
 }
 
 func (o *Order) ClearEvents() {

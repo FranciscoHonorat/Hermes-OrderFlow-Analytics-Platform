@@ -19,7 +19,7 @@ const (
 
 func (s OrderStatus) IsValid() bool {
 	switch s {
-	case OrderStatusPending, OrderStatusConfirmed, OrderStatusShipped, OrderStatusDelivered, OrderStatusCancelled, OrderStatusPaid:
+	case OrderStatusPending, OrderStatusConfirmed, OrderStatusShipped, OrderStatusDelivered, OrderStatusCancelled, OrderStatusPaid, OrderStatusPlaced:
 		return true
 	default:
 		return false

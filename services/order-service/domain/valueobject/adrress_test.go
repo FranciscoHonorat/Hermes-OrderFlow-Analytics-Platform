@@ -1,11 +1,12 @@
 package valueobject_test
 
 import (
-	"errors"
 	"testing"
 
 	domainErrors "github.com/FranciscoHonorat/ordemflow/services/order-service/domain/domain-errors"
 	address "github.com/FranciscoHonorat/ordemflow/services/order-service/domain/valueobject"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAddress(t *testing.T) {
@@ -20,40 +21,26 @@ func TestAddress(t *testing.T) {
 			complement     string
 			expectedError  error
 		}{
-			{"valid Address", "12345678", "Street", "Neighborhood", 02, "reference", "complement", nil},
-			{"Invalid CEP", "123456", "Street", "Neighborhood", 02, "reference", "complement", domainErrors.ErrInvalidCEP},
-			{"Invalid Street", "12345678", "", "Neighborhood", 02, "reference", "complement", domainErrors.ErrFieldEmpty},
-			{"Invalid Neighborhood", "12345678", "Street", "", 02, "reference", "complement", domainErrors.ErrFieldEmpty},
+			{"valid Address", "12345678", "Street", "Neighborhood", 2, "reference", "complement", nil},
+			{"Invalid CEP", "123456", "Street", "Neighborhood", 2, "reference", "complement", domainErrors.ErrInvalidCEP},
+			{"Invalid Street", "12345678", "", "Neighborhood", 2, "reference", "complement", domainErrors.ErrFieldEmpty},
+			{"Invalid Neighborhood", "12345678", "Street", "", 2, "reference", "complement", domainErrors.ErrFieldEmpty},
 			{"Invalid Number", "12345678", "Street", "Neighborhood", -1, "reference", "complement", domainErrors.ErrInvalidNumber},
-			{"Invalid ReferencePoint", "12345678", "Street", "Neighborhood", 02, "", "complement", domainErrors.ErrFieldEmpty},
-			{"Invalid Complement", "12345678", "Street", "Neighborhood", 02, "reference", "", domainErrors.ErrFieldEmpty},
+			{"Invalid ReferencePoint", "12345678", "Street", "Neighborhood", 2, "", "complement", domainErrors.ErrFieldEmpty},
+			{"Invalid Complement", "12345678", "Street", "Neighborhood", 2, "reference", "", domainErrors.ErrFieldEmpty},
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				a, err := address.NewAddress(tt.cep, tt.street, tt.neighborhood, tt.number, tt.referencePoint, tt.complement)
-				if !errors.Is(err, tt.expectedError) {
-					t.Errorf("Expected error: %v, got: %v", tt.expectedError, err)
-				}
-
-				if err == nil {
-					if a.Cep() != tt.cep {
-						t.Errorf("Expected CEP: %s, got: %s", tt.cep, a.Cep())
-					}
-					if a.Street() != tt.street {
-						t.Errorf("Expected Street: %s, got: %s", tt.street, a.Street())
-					}
-					if a.Neighborhood() != tt.neighborhood {
-						t.Errorf("Expected Neighborhood: %s, got: %s", tt.neighborhood, a.Neighborhood())
-					}
-					if a.Number() != tt.number {
-						t.Errorf("Expected Number: %d, got: %d", tt.number, a.Number())
-					}
-					if a.ReferencePoint() != tt.referencePoint {
-						t.Errorf("Expected Reference Point: %s, got: %s", tt.referencePoint, a.ReferencePoint())
-					}
-					if a.Complement() != tt.complement {
-						t.Errorf("Expected Complement: %s, got: %s", tt.complement, a.Complement())
-					}
+				assert.ErrorIs(t, err, tt.expectedError)
+				if tt.expectedError == nil {
+					require.NotNil(t, a)
+					assert.Equal(t, tt.cep, a.Cep())
+					assert.Equal(t, tt.street, a.Street())
+					assert.Equal(t, tt.neighborhood, a.Neighborhood())
+					assert.Equal(t, tt.number, a.Number())
+					assert.Equal(t, tt.referencePoint, a.ReferencePoint())
+					assert.Equal(t, tt.complement, a.Complement())
 				}
 			})
 		}
@@ -74,12 +61,8 @@ func TestAddress(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				jsonData, err := tt.a.MarshalJSON()
-				if err != nil {
-					t.Errorf("Unexpected error: %v", err)
-				}
-				if string(jsonData) != tt.expected {
-					t.Errorf("Expected JSON: %s, got: %s", tt.expected, string(jsonData))
-				}
+				require.NoError(t, err)
+				assert.JSONEq(t, tt.expected, string(jsonData))
 			})
 		}
 	})
@@ -101,9 +84,7 @@ func TestAddress(t *testing.T) {
 		for _, tt := range tests {
 			var a address.Address
 			err := a.UnmarshalJSON([]byte(tt.jsonData))
-			if !errors.Is(err, tt.expectedError) {
-				t.Errorf("Expected error: %v, got: %v", tt.expectedError, err)
-			}
+			assert.ErrorIs(t, err, tt.expectedError)
 		}
 	})
 }

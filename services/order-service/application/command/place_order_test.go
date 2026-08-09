@@ -14,6 +14,7 @@ import (
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/domain/event"
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/domain/repository"
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/domain/valueobject"
+	"github.com/stretchr/testify/require"
 )
 
 type MockClock struct {
@@ -107,39 +108,24 @@ func TestPlaceOrderHandler_Handle(t *testing.T) {
 		}
 
 		result, err := handler.Handle(context.Background(), cmd)
+		require.NoError(t, err)
 
-		if err != nil {
-			t.Fatalf("expected no error, got %v", err)
-		}
+		require.NotEqual(t, "", result.OrderID)
 
-		if result.OrderID == "" {
-			t.Error("expected a valid generated OrderID in result")
-		}
+		require.NotNil(t, orderRepo.Saved)
 
-		if orderRepo.Saved == nil {
-			t.Fatal("expected order to be saved in repository")
-		}
+		require.Equal(t, result.OrderID, orderRepo.Saved.OrderID().String())
 
-		if orderRepo.Saved.OrderID().String() != result.OrderID {
-			t.Errorf("expected saved order ID to match result, got %s", orderRepo.Saved.OrderID().String())
-		}
+		require.Equal(t, valueobject.OrderStatusPlaced, orderRepo.Saved.Status())
 
-		if len(outboxRepo.SavedEvents) != 1 {
-			t.Fatalf("expected 1 event in outbox, got %d", len(outboxRepo.SavedEvents))
-		}
+		require.Equal(t, 1, len(outboxRepo.SavedEvents))
 
 		evt := outboxRepo.SavedEvents[0]
-		if evt.EventName() != "order.placed" {
-			t.Errorf("expected event name to be 'order.placed', got %s", evt.EventName())
-		}
+		require.Equal(t, "order.placed", evt.EventName())
 
-		if !evt.OccurredAt().Equal(fixedTime) {
-			t.Errorf("expected event timestamp to be %v, got %v", fixedTime, evt.OccurredAt())
-		}
+		require.True(t, evt.OccurredAt().Equal(fixedTime))
 
-		if len(orderRepo.Saved.PullEvents()) != 0 {
-			t.Error("expected entity domain events slice to be empty after processing")
-		}
+		require.Equal(t, 0, len(orderRepo.Saved.PullEvents()))
 	})
 
 	t.Run("Should return error immediately without hitting database when items list is empty (Fail-Fast)", func(t *testing.T) {
@@ -155,11 +141,7 @@ func TestPlaceOrderHandler_Handle(t *testing.T) {
 
 		_, err := handler.Handle(context.Background(), cmd)
 
-		if err == nil {
-			{
-				t.Error("expected fail-fast error when order has no items, but got nil")
-			}
-		}
+		require.Error(t, err)
 	})
 
 	t.Run("Should return error when customer UUID is malformed", func(t *testing.T) {
@@ -177,8 +159,6 @@ func TestPlaceOrderHandler_Handle(t *testing.T) {
 
 		_, err := handler.Handle(context.Background(), cmd)
 
-		if err == nil {
-			t.Error("expected error due to invalid customer UUID, but got nil")
-		}
+		require.Error(t, err)
 	})
 }

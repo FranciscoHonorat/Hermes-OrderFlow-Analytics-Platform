@@ -1,12 +1,13 @@
 package valueobject_test
 
 import (
-	"errors"
 	"testing"
 
 	domainErrors "github.com/FranciscoHonorat/ordemflow/services/order-service/domain/domain-errors"
 	customer "github.com/FranciscoHonorat/ordemflow/services/order-service/domain/valueobject"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCustomerID(t *testing.T) {
@@ -22,14 +23,12 @@ func TestCustomerID(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				p, err := customer.NewCustomerID(tt.id)
-				if !errors.Is(err, tt.expectedError) {
-					t.Errorf("Expected error: %v, got: %v", tt.expectedError, err)
-				}
 
-				if err == nil {
-					if p.ID() != tt.id {
-						t.Errorf("Expected ID: %v, got: %v", tt.id, p.ID())
-					}
+				assert.ErrorIs(t, err, tt.expectedError)
+
+				if tt.expectedError == nil {
+					require.NotNil(t, p)
+					assert.Equal(t, tt.id, p.ID())
 				}
 			})
 		}
@@ -37,11 +36,10 @@ func TestCustomerID(t *testing.T) {
 
 	t.Run("Test for String method", func(t *testing.T) {
 		id := uuid.New()
-		c, _ := customer.NewCustomerID(id)
+		c, err := customer.NewCustomerID(id)
 
-		if c.String() != id.String() {
-			t.Errorf("Expected: %s, got: %s", id.String(), c.String())
-		}
+		require.NoError(t, err)
+		assert.Equal(t, id.String(), c.String())
 	})
 
 	t.Run("Test for Equal method", func(t *testing.T) {
@@ -59,9 +57,7 @@ func TestCustomerID(t *testing.T) {
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				if tt.p1.Equal(tt.p2) != tt.expected {
-					t.Errorf("Expected equality: %v, got: %v", tt.expected, tt.p1.Equal(tt.p2))
-				}
+				assert.Equal(t, tt.expected, tt.p1.Equal(tt.p2))
 			})
 		}
 	})
@@ -78,42 +74,32 @@ func TestCustomerID(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				jsonData, err := tt.c.MarshalJSON()
-				if err != nil {
-					t.Errorf("Unexpected error: %v", err)
-				}
-				if string(jsonData) != tt.expected {
-					t.Errorf("Expected JSON: %s, got: %s", tt.expected, string(jsonData))
-				}
+				require.NoError(t, err)
+				assert.JSONEq(t, tt.expected, string(jsonData))
 			})
 		}
 	})
 
-	t.Run("Test for UnmarhsalJSON", func(t *testing.T) {
+	t.Run("Test for UnmarshalJSON", func(t *testing.T) {
 		id1 := uuid.New()
 		tests := []struct {
-			name     string
-			c        customer.CustomerID
-			expected string
+			name          string
+			inputJSON     string
+			expectedID    uuid.UUID
+			expectedError error
 		}{
-			{"Valid JSON", customer.NewCustomerIDMust(id1), `{"id":"` + id1.String() + `"}`},
-			{"Invalid JSON", customer.CustomerID{}, `{"id":"00000000-0000-0000-0000-000000000000"}`},
+			{"Valid JSON", `{"id":"` + id1.String() + `"}`, id1, nil},
+			{"Invalid JSON", `{"id":"00000000-0000-0000-0000-000000000000"}`, uuid.Nil, domainErrors.ErrInvalidCustomerID},
 		}
 		for _, tt := range tests {
-			var c customer.CustomerID
 			t.Run(tt.name, func(t *testing.T) {
-				err := c.UnmarshalJSON([]byte(tt.expected))
-				if tt.name == "Invalid JSON" {
-					if !errors.Is(err, domainErrors.ErrInvalidCustomerID) {
-						t.Errorf("Expected error: %v, got: %v", domainErrors.ErrInvalidCustomerID, err)
-					}
-					return
-				}
-				if err != nil {
-					t.Errorf("Unexpected error: %v", err)
-				} else {
-					if c.ID() != tt.c.ID() {
-						t.Errorf("Expected ID: %v, got: %v", tt.c.ID(), c.ID())
-					}
+				var c customer.CustomerID
+				err := c.UnmarshalJSON([]byte(tt.inputJSON))
+
+				assert.ErrorIs(t, err, tt.expectedError)
+
+				if tt.expectedError == nil {
+					assert.Equal(t, tt.expectedID, c.ID())
 				}
 			})
 		}

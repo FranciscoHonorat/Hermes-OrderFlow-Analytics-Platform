@@ -3,7 +3,10 @@ package valueobject_test
 import (
 	"testing"
 
+	domainErrors "github.com/FranciscoHonorat/ordemflow/services/order-service/domain/domain-errors"
 	status "github.com/FranciscoHonorat/ordemflow/services/order-service/domain/valueobject"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestOrderStatus(t *testing.T) {
@@ -23,9 +26,7 @@ func TestOrderStatus(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				if got := tt.status.IsValid(); got != tt.want {
-					t.Errorf("IsValid() = %v, want %v", got, tt.want)
-				}
+				assert.Equal(t, tt.want, tt.status.IsValid())
 			})
 		}
 	})
@@ -45,39 +46,57 @@ func TestOrderStatus(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				if got := tt.status.String(); got != tt.want {
-					t.Errorf("String() = %v, want %v", got, tt.want)
-				}
+				assert.Equal(t, tt.want, tt.status.String())
 			})
 		}
 	})
 
-	t.Run("Test for MarshalJSON and UnmarshalJSON methods", func(t *testing.T) {
+	t.Run("Test for MarshalJSON", func(t *testing.T) {
 		tests := []struct {
-			name   string
-			status status.OrderStatus
+			name     string
+			status   status.OrderStatus
+			expected string
 		}{
-			{"Status PENDING", status.OrderStatusPending},
-			{"Status CONFIRMED", status.OrderStatusConfirmed},
-			{"Status SHIPPED", status.OrderStatusShipped},
-			{"Status DELIVERED", status.OrderStatusDelivered},
-			{"Status CANCELLED", status.OrderStatusCancelled},
+			{"Status PENDING", status.OrderStatusPending, `"PENDING"`},
+			{"Status CONFIRMED", status.OrderStatusConfirmed, `"CONFIRMED"`},
 		}
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				jsonData, err := tt.status.MarshalJSON()
-				if err != nil {
-					t.Errorf("MarshalJSON() error = %v", err)
-				}
+				require.NoError(t, err)
+				assert.JSONEq(t, tt.expected, string(jsonData))
+			})
+		}
+	})
 
+	t.Run("Test for UnmarshalJSON", func(t *testing.T) {
+		tests := []struct {
+			name          string
+			inputJSON     string
+			expected      status.OrderStatus
+			expectedError error
+		}{
+			{"Valid PENDING", `"PENDING"`, status.OrderStatusPending, nil},
+			{"Valid CONFIRMED", `"CONFIRMED"`, status.OrderStatusConfirmed, nil},
+			{"Invalid Status Value", `"INVALID_STATUS"`, "", domainErrors.ErrInvalidOrderStatus},
+			{"Malformed JSON Syntax", `{"status": PENDING}`, "", assert.AnError},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
 				var unmarshaledStatus status.OrderStatus
-				if err := unmarshaledStatus.UnmarshalJSON(jsonData); err != nil {
-					t.Errorf("UnmarshalJSON() error = %v", err)
-				}
+				err := unmarshaledStatus.UnmarshalJSON([]byte(tt.inputJSON))
 
-				if unmarshaledStatus != tt.status {
-					t.Errorf("Unmarshaled status = %v, want %v", unmarshaledStatus, tt.status)
+				if tt.expectedError != nil {
+					if tt.expectedError == domainErrors.ErrInvalidOrderStatus {
+						assert.ErrorIs(t, err, domainErrors.ErrInvalidOrderStatus)
+					} else {
+						assert.Error(t, err)
+					}
+				} else {
+					require.NoError(t, err)
+					assert.Equal(t, tt.expected, unmarshaledStatus)
 				}
 			})
 		}

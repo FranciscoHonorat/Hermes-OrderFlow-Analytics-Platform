@@ -6,6 +6,8 @@ import (
 	domainErrors "github.com/FranciscoHonorat/ordemflow/services/order-service/domain/domain-errors"
 	orderid "github.com/FranciscoHonorat/ordemflow/services/order-service/domain/valueobject"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestOrderID(t *testing.T) {
@@ -21,14 +23,12 @@ func TestOrderID(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				p, err := orderid.NewOrderID(tt.id)
-				if err != tt.wantErr {
-					t.Errorf("Expected error: %v, got: %v", tt.wantErr, err)
-				}
 
-				if err == nil {
-					if p.ID() != tt.id {
-						t.Errorf("Expected ID: %v, got: %v", tt.id, p.ID())
-					}
+				assert.ErrorIs(t, err, tt.wantErr)
+
+				if tt.wantErr == nil {
+					require.NotNil(t, p)
+					assert.Equal(t, tt.id, p.ID())
 				}
 			})
 		}
@@ -36,57 +36,64 @@ func TestOrderID(t *testing.T) {
 
 	t.Run("Test for String method", func(t *testing.T) {
 		id := uuid.New()
-		orderIDObj, _ := orderid.NewOrderID(id)
+		orderIDObj, err := orderid.NewOrderID(id)
+		require.NoError(t, err)
 
-		if orderIDObj.String() != id.String() {
-			t.Errorf("Expected String: %v, got: %v", id.String(), orderIDObj.String())
-		}
+		assert.Equal(t, id.String(), orderIDObj.String())
 	})
 
 	t.Run("Test for Equal method", func(t *testing.T) {
 		id1 := uuid.New()
 		id2 := uuid.New()
 
-		orderID1, _ := orderid.NewOrderID(id1)
-		orderID2, _ := orderid.NewOrderID(id1)
-		orderID3, _ := orderid.NewOrderID(id2)
+		orderID1 := orderid.NewOrderIDMust(id1)
+		orderID2 := orderid.NewOrderIDMust(id1)
+		orderID3 := orderid.NewOrderIDMust(id2)
 
-		if !orderID1.Equal(orderID2) {
-			t.Errorf("Expected orderID1 to be equal to orderID2")
-		}
-
-		if orderID1.Equal(orderID3) {
-			t.Errorf("Expected orderID1 to not be equal to orderID3")
-		}
+		assert.True(t, orderID1.Equal(orderID2), "Expected orderID1 to be equal to orderID2")
+		assert.False(t, orderID1.Equal(orderID3), "Expected orderID1 to not be equal to orderID3")
 	})
 
-	t.Run("Test for MarshalJSON and UnmarshalJSON", func(t *testing.T) {
+	t.Run("Test for MarshalJSON", func(t *testing.T) {
 		id := uuid.New()
-		orderIDObj, _ := orderid.NewOrderID(id)
-
-		jsonData, err := orderIDObj.MarshalJSON()
-		if err != nil {
-			t.Errorf("Error marshalling OrderID: %v", err)
+		tests := []struct {
+			name     string
+			orderID  orderid.OrderID
+			expected string
+		}{
+			{"Valid ID", orderid.NewOrderIDMust(id), `{"id":"` + id.String() + `"}`},
 		}
-
-		var unmarshalledOrderID orderid.OrderID
-		err = unmarshalledOrderID.UnmarshalJSON(jsonData)
-		if err != nil {
-			t.Errorf("Error unmarshalling OrderID: %v", err)
-		}
-
-		if !orderIDObj.Equal(unmarshalledOrderID) {
-			t.Errorf("Expected unmarshalled OrderID to be equal to original")
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				jsonData, err := tt.orderID.MarshalJSON()
+				require.NoError(t, err)
+				assert.JSONEq(t, tt.expected, string(jsonData))
+			})
 		}
 	})
 
-	t.Run("Test for UnmarshalJSON with invalid data", func(t *testing.T) {
-		invalidJSON := []byte(`{"id": "00000000-0000-0000-0000-000000000000"}`)
+	t.Run("Test for UnmarshalJSON", func(t *testing.T) {
+		id := uuid.New()
+		tests := []struct {
+			name          string
+			inputJSON     string
+			expectedID    uuid.UUID
+			expectedError error
+		}{
+			{"Valid JSON", `{"id":"` + id.String() + `"}`, id, nil},
+			{"Invalid JSON ID", `{"id":"00000000-0000-0000-0000-000000000000"}`, uuid.Nil, domainErrors.ErrInvalidOrderID},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				var unmarshalledOrderID orderid.OrderID
+				err := unmarshalledOrderID.UnmarshalJSON([]byte(tt.inputJSON))
 
-		var unmarshalledOrderID orderid.OrderID
-		err := unmarshalledOrderID.UnmarshalJSON(invalidJSON)
-		if err != domainErrors.ErrInvalidOrderID {
-			t.Errorf("Expected error: %v, got: %v", domainErrors.ErrInvalidOrderID, err)
+				assert.ErrorIs(t, err, tt.expectedError)
+
+				if tt.expectedError == nil {
+					assert.Equal(t, tt.expectedID, unmarshalledOrderID.ID())
+				}
+			})
 		}
 	})
 }

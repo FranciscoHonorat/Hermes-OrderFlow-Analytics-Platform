@@ -12,45 +12,42 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestConfirmOrderHandler_Handle(t *testing.T) {
+func TestShipOrderHandler_Handle(t *testing.T) {
 	fixedTime := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
 	orderUUID := uuid.New().String()
 
-	createTime := fixedTime.Add(-5 * time.Minute)
-
-	t.Run("Should confirm order successfully and save to outbox", func(t *testing.T) {
+	t.Run("Should ship order successfully and save to outbox", func(t *testing.T) {
 		mockClock := &MockClock{NowTime: fixedTime}
 		outboxRepo := &MockOutboxRepository{}
 
+		createTime := fixedTime.Add(-5 * time.Minute)
+		confirmTime := fixedTime.Add(-2 * time.Minute)
+
 		orderID, err := valueobject.NewOrderID(uuid.MustParse(orderUUID))
 		require.NoError(t, err)
-
 		customerID, err := valueobject.NewCustomerID(uuid.New())
 		require.NoError(t, err)
-
 		existingOrder, err := entity.NewOrder(orderID, customerID)
 		require.NoError(t, err)
 
 		productID, err := valueobject.NewProductID(uuid.New())
 		require.NoError(t, err)
-
 		price, err := valueobject.NewMoney(1000, "USD")
 		require.NoError(t, err)
-
 		quantity, err := valueobject.NewQuantity(2)
 		require.NoError(t, err)
-
 		item, err := valueobject.NewOrderItem(productID, price, quantity)
-
+		require.NoError(t, err)
+		err = existingOrder.AddItem(item)
 		require.NoError(t, err)
 
-		require.NotNil(t, item)
+		err = existingOrder.Place(createTime)
+		require.NoError(t, err)
 
-		require.NoError(t, existingOrder.AddItem(item))
+		_ = existingOrder.PullEvents()
 
-		require.NoError(t, existingOrder.Place(createTime))
-
-		require.Equal(t, valueobject.OrderStatusPlaced, existingOrder.Status())
+		err = existingOrder.Confirm(confirmTime)
+		require.NoError(t, err)
 
 		_ = existingOrder.PullEvents()
 
@@ -63,21 +60,22 @@ func TestConfirmOrderHandler_Handle(t *testing.T) {
 		provider := &MockRepositoryProvider{orderRepo: orderRepo, outboxRepo: outboxRepo}
 		uow := &MockUnitOfWork{provider: provider}
 
-		handler := command.NewConfirmOrderHandler(uow, mockClock)
+		hanler := command.NewShipOrderHandler(uow, mockClock)
 
-		cmd := command.ConfirmOrderCommand{
+		cmd := command.ShipOrderCommand{
 			OrderID: orderUUID,
 		}
 
-		err = handler.Handle(context.Background(), cmd)
-
+		err = hanler.Handle(context.Background(), cmd)
 		require.NoError(t, err)
 
-		require.Equal(t, valueobject.OrderStatusConfirmed, existingOrder.Status())
+		require.NotNil(t, orderRepo.Saved)
+
+		require.Equal(t, valueobject.OrderStatusShipped, orderRepo.Saved.Status())
 
 		require.Len(t, outboxRepo.SavedEvents, 1)
-
 		evt := outboxRepo.SavedEvents[0]
-		require.Equal(t, "order.confirmed", evt.EventName())
+		require.Equal(t, "order.shipped", evt.EventName())
+		require.Equal(t, fixedTime, evt.OccurredAt())
 	})
 }

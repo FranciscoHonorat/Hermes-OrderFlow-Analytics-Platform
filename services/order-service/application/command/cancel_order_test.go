@@ -9,6 +9,7 @@ import (
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/domain/entity"
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/domain/valueobject"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCancelOrderHandler_Handle(t *testing.T) {
@@ -22,41 +23,29 @@ func TestCancelOrderHandler_Handle(t *testing.T) {
 		createTime := fixedTime.Add(-5 * time.Minute)
 
 		orderID, err := valueobject.NewOrderID(uuid.MustParse(orderUUID))
-		if err != nil {
-			t.Fatalf("failed to create order ID: %v", err)
-		}
+		require.NoError(t, err)
+
 		customerID, err := valueobject.NewCustomerID(uuid.New())
-		if err != nil {
-			t.Fatalf("failed to create customer ID: %v", err)
-		}
+		require.NoError(t, err)
+
 		existingOrder, err := entity.NewOrder(orderID, customerID)
-		if err != nil {
-			t.Fatalf("failed to create order: %v", err)
-		}
+		require.NoError(t, err)
 
 		productID, err := valueobject.NewProductID(uuid.New())
-		if err != nil {
-			t.Fatalf("failed to create product ID: %v", err)
-		}
-		price, err := valueobject.NewMoney(1000, "USD")
-		if err != nil {
-			t.Fatalf("failed to create price: %v", err)
-		}
-		quantity, err := valueobject.NewQuantity(2)
-		if err != nil {
-			t.Fatalf("failed to create quantity: %v", err)
-		}
-		item, err := valueobject.NewOrderItem(productID, price, quantity)
-		if err != nil {
-			t.Fatalf("failed to create order item: %v", err)
-		}
-		if err := existingOrder.AddItem(item); err != nil {
-			t.Fatalf("failed to add item to order: %v", err)
-		}
+		require.NoError(t, err)
 
-		if err := existingOrder.Place(createTime); err != nil {
-			t.Fatalf("failed to place order: %v", err)
-		}
+		price, err := valueobject.NewMoney(1000, "USD")
+		require.NoError(t, err)
+
+		quantity, err := valueobject.NewQuantity(2)
+		require.NoError(t, err)
+
+		item, err := valueobject.NewOrderItem(productID, price, quantity)
+		require.NoError(t, err)
+
+		require.NoError(t, existingOrder.AddItem(item))
+
+		require.NoError(t, existingOrder.Place(createTime))
 		_ = existingOrder.PullEvents()
 
 		orderRepo := &MockOrderRepository{
@@ -76,17 +65,13 @@ func TestCancelOrderHandler_Handle(t *testing.T) {
 
 		err = handler.Handle(context.Background(), cmd)
 
-		if err != nil {
-			t.Fatalf("expected no error, got %v", err)
-		}
+		require.NoError(t, err)
 
-		if len(outboxRepo.SavedEvents) != 1 {
-			t.Errorf("expected 1 event in outbox, got %d", len(outboxRepo.SavedEvents))
-		}
+		require.Equal(t, valueobject.OrderStatusCancelled, existingOrder.Status())
+
+		require.Len(t, outboxRepo.SavedEvents, 1)
 
 		evt := outboxRepo.SavedEvents[0]
-		if evt.EventName() != "order.cancelled" {
-			t.Errorf("expected event type 'order.cancelled', got '%s'", evt.EventName())
-		}
+		require.Equal(t, "order.cancelled", evt.EventName())
 	})
 }

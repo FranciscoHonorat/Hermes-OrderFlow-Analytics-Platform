@@ -1,11 +1,12 @@
 package valueobject_test
 
 import (
-	"errors"
 	"testing"
 
 	domainErrors "github.com/FranciscoHonorat/ordemflow/services/order-service/domain/domain-errors"
 	money "github.com/FranciscoHonorat/ordemflow/services/order-service/domain/valueobject"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMoney(t *testing.T) {
@@ -26,16 +27,13 @@ func TestMoney(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				m, err := money.NewMoney(tt.amount, tt.currency)
-				if !errors.Is(err, tt.expectedError) {
-					t.Errorf("Expected error: %v, got: %v", tt.expectedError, err)
-				}
-				if err == nil {
-					if m.Amount() != tt.amount {
-						t.Errorf("Expected amount: %d, got: %d", tt.amount, m.Amount())
-					}
-					if m.Currency() != tt.currency {
-						t.Errorf("Expected currency: %s, got: %s", tt.currency, m.Currency())
-					}
+
+				assert.ErrorIs(t, err, tt.expectedError)
+
+				if tt.expectedError == nil {
+					require.NotNil(t, m)
+					assert.Equal(t, tt.amount, m.Amount())
+					assert.Equal(t, tt.currency, m.Currency())
 				}
 			})
 		}
@@ -58,20 +56,15 @@ func TestMoney(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				if tt.expectPanic {
-					defer func() {
-						if r := recover(); r == nil {
-							t.Errorf("Expected panic but did not occur")
-						}
-					}()
-				}
-				m := money.NewMoneyMust(tt.amount, tt.currency)
-				if !tt.expectPanic {
-					if m.Amount() != tt.amount {
-						t.Errorf("Expected amount: %d, got: %d", tt.amount, m.Amount())
-					}
-					if m.Currency() != tt.currency {
-						t.Errorf("Expected currency: %s, got: %s", tt.currency, m.Currency())
-					}
+					assert.Panics(t, func() {
+						money.NewMoneyMust(tt.amount, tt.currency)
+					})
+				} else {
+					assert.NotPanics(t, func() {
+						m := money.NewMoneyMust(tt.amount, tt.currency)
+						assert.Equal(t, tt.amount, m.Amount())
+						assert.Equal(t, tt.currency, m.Currency())
+					})
 				}
 			})
 		}
@@ -89,12 +82,8 @@ func TestMoney(t *testing.T) {
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				if tt.m.Amount() != tt.expected {
-					t.Errorf("Expected amount: %d, got: %d", tt.expected, tt.m.Amount())
-				}
-				if tt.m.Currency() != tt.currency {
-					t.Errorf("Expected currency: %s, got: %s", tt.currency, tt.m.Currency())
-				}
+				assert.Equal(t, tt.expected, tt.m.Amount())
+				assert.Equal(t, tt.currency, tt.m.Currency())
 			})
 		}
 	})
@@ -112,9 +101,7 @@ func TestMoney(t *testing.T) {
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				if tt.m1.Equals(tt.m2) != tt.expected {
-					t.Errorf("Expected equality: %v, got: %v", tt.expected, tt.m1.Equals(tt.m2))
-				}
+				assert.Equal(t, tt.expected, tt.m1.Equals(tt.m2))
 			})
 		}
 	})
@@ -134,11 +121,11 @@ func TestMoney(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				result, err := tt.m.Multiply(tt.quantity)
-				if !errors.Is(err, tt.expectedError) {
-					t.Errorf("Expected error: %v, got: %v", tt.expectedError, err)
-				}
-				if err == nil && !result.Equals(tt.expectedMoney) {
-					t.Errorf("Expected money: %v, got: %v", tt.expectedMoney, result)
+
+				assert.ErrorIs(t, err, tt.expectedError)
+
+				if tt.expectedError == nil {
+					assert.True(t, result.Equals(tt.expectedMoney))
 				}
 			})
 		}
@@ -155,9 +142,7 @@ func TestMoney(t *testing.T) {
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				if tt.m.String() != tt.expected {
-					t.Errorf("Expected string: %s, got: %s", tt.expected, tt.m.String())
-				}
+				assert.Equal(t, tt.expected, tt.m.String())
 			})
 		}
 	})
@@ -174,12 +159,8 @@ func TestMoney(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				jsonData, err := tt.m.MarshalJSON()
-				if err != nil {
-					t.Errorf("Unexpected error: %v", err)
-				}
-				if string(jsonData) != tt.expected {
-					t.Errorf("Expected JSON: %s, got: %s", tt.expected, string(jsonData))
-				}
+				require.NoError(t, err)
+				assert.JSONEq(t, tt.expected, string(jsonData))
 			})
 		}
 	})
@@ -200,11 +181,11 @@ func TestMoney(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				var m money.Money
 				err := m.UnmarshalJSON([]byte(tt.jsonData))
-				if !errors.Is(err, tt.expectedError) {
-					t.Errorf("Expected error: %v, got: %v", tt.expectedError, err)
-				}
-				if err == nil && !m.Equals(tt.expectedMoney) {
-					t.Errorf("Expected money: %v, got: %v", tt.expectedMoney, m)
+
+				assert.ErrorIs(t, err, tt.expectedError)
+
+				if tt.expectedError == nil {
+					assert.True(t, m.Equals(tt.expectedMoney))
 				}
 			})
 		}

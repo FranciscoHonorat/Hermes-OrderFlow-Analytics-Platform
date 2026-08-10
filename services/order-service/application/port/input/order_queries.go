@@ -11,7 +11,7 @@ type OrderDTO struct {
 	ID         uuid.UUID `json:"id"`
 	CustomerID uuid.UUID `json:"customer_id"`
 	Status     string    `json:"status"`
-	Total      float64   `json:"total"`
+	Total      int64     `json:"total"`
 	Currency   string    `json:"currency"`
 	Items      []ItemDTO `json:"items"`
 	CreatedAt  time.Time `json:"created_at"`

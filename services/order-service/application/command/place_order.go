@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/FranciscoHonorat/ordemflow/services/order-service/application/port/input"
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/application/port/output"
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/domain/entity"
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/domain/valueobject"
@@ -120,4 +121,33 @@ func (h *PlaceOrderHandler) Handle(ctx context.Context, cmd PlaceOrderCommand) (
 	}
 
 	return PlaceOrderResult{OrderID: order.OrderID().String()}, nil
+}
+
+func (h *PlaceOrderHandler) Execute(ctx context.Context, input input.CreateOrderInput) (uuid.UUID, error) {
+	cmdItems := make([]PlaceOrderItem, len(input.Items))
+	for i, item := range input.Items {
+		cmdItems[i] = PlaceOrderItem{
+			ProductID:      item.ProductID.String(),
+			Quantity:       int64(item.Quantity),
+			UnitPriceCents: item.Price,
+			Currency:       "USD", // Assuming USD for simplicity; adjust as needed
+		}
+	}
+
+	cmd := PlaceOrderCommand{
+		CustomerID: input.CustomerID.String(),
+		Items:      cmdItems,
+	}
+
+	result, err := h.Handle(ctx, cmd)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	createdUUID, err := uuid.Parse(result.OrderID)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	return createdUUID, nil
 }

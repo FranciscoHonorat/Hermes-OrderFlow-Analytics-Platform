@@ -1,12 +1,18 @@
 package main
 
 import (
-	"fmt"
+	"log"
 
-	"github.com/FranciscoHonorat/ordemflow/shared/events"
+	"github.com/FranciscoHonorat/ordemflow/services/order-service/config"
 )
 
 func main() {
-	var id events.EventID = "example-event-id"
-	fmt.Println(id)
+	cfg := config.Get()
+
+	log.Printf("iniciando order-service no ambiente: %s", cfg.Env)
+
+	db, err := postegres.NewPostgresDB(cfg.Database.DSN())
+	if err != nil {
+		log.Fatalf("Fail to connect to PostgreSQL DB: %v", err)
+	}
 }

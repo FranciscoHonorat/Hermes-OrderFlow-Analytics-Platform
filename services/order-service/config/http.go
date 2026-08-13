@@ -41,14 +41,14 @@ func NewHTTPServer(
 
 	orderGroup := router.Group("/orders")
 	{
-		orderGroup.POST("", gin.WrapF(orderHandler.PlaceOrder))
-		orderGroup.GET("", gin.WrapF(orderHandler.ListOrders))
+		orderGroup.POST("", func(c *gin.Context) { orderHandler.PlaceOrder(c) })
+		orderGroup.GET("", func(c *gin.Context) { orderHandler.ListOrders(c) })
 
-		orderGroup.POST("/confirm", gin.WrapF(orderHandler.ConfirmOrder))
-		orderGroup.POST("/cancel", gin.WrapF(orderHandler.CancelOrder))
-		orderGroup.POST("/ship", gin.WrapF(orderHandler.ShipOrder))
+		orderGroup.POST("/confirm", func(c *gin.Context) { orderHandler.ConfirmOrder(c) })
+		orderGroup.POST("/cancel", func(c *gin.Context) { orderHandler.CancelOrder(c) })
+		orderGroup.POST("/ship", func(c *gin.Context) { orderHandler.ShipOrder(c) })
 
-		orderGroup.GET("/:order_id", gin.WrapF(orderHandler.GetOrderByID))
+		orderGroup.GET("/:order_id", func(c *gin.Context) { orderHandler.GetOrderByID(c) })
 	}
 
 	return &HTTPServer{

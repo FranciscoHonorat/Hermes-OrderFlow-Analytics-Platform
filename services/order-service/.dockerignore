@@ -1,0 +1,9 @@
+**/.git
+**/.idea
+**/.vscode
+**/bin
+**/tmp
+**/vendor
+**/*.md
+**/*.log
+Dockerfile

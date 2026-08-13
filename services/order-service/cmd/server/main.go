@@ -2,12 +2,16 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
 
+	"github.com/FranciscoHonorat/ordemflow/services/order-service/application/command"
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/config"
+	"github.com/FranciscoHonorat/ordemflow/services/order-service/infrastructure/http/handler"
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/infrastructure/http/middleware"
+	"github.com/FranciscoHonorat/ordemflow/services/order-service/infrastructure/persistence"
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/infrastructure/persistence/postgres"
 	"github.com/gin-gonic/gin"
 )
@@ -19,7 +23,16 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	db, err := postgres.NewConnection(ctx, cfg.Database.Host+":"+cfg.Database.Port+" user="+cfg.Database.User+" password="+cfg.Database.Password+" dbname="+cfg.Database.Name+" sslmode="+cfg.Database.SSLMode)
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		cfg.Database.Host,
+		cfg.Database.Port,
+		cfg.Database.User,
+		cfg.Database.Password,
+		cfg.Database.Name,
+		cfg.Database.SSLMode,
+	)
+
+	db, err := postgres.NewConnection(ctx, dsn)
 	if err != nil {
 		log.Fatalf("Failed to connect to the database: %v", err)
 	}
@@ -36,9 +49,29 @@ func main() {
 	_ = outboxRepo
 	_ = uow
 
-	if cfg.Env == "development" {
-		log.Println("Running in development mode. Performing database migrations...")
+	clock := persistence.NewRealClock()
+
+	placeHandler := command.NewPlaceOrderHandler(uow, clock)
+	confirmHandler := command.NewConfirmOrderHandler(uow, clock)
+	cancelHandler := command.NewCancelOrderHandler(uow, clock)
+	shipHandler := command.NewShipOrderHandler(uow, clock)
+
+	placeUC := &placeOrderUseCaseAdapter{handler: placeHandler}
+	confirmUC := &confirmOrderUseCaseAdapter{handler: confirmHandler}
+	cancelUC := &cancelOrderUseCaseAdapter{handler: cancelHandler}
+	shipUC := &shipOrderUseCaseAdapter{handler: shipHandler}
+
+	queries := &queriesOrderUseCaseAdapter{
+		queries: postgres.NewOrderQueries(db),
 	}
+
+	orderHandler := handler.NewOrderHandler(
+		queries,
+		placeUC,
+		confirmUC,
+		cancelUC,
+		shipUC,
+	)
 
 	r := gin.New()
 
@@ -50,6 +83,15 @@ func main() {
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "healthy", "time": time.Now().UTC()})
 	})
+
+	orderRoutes := r.Group("/orders")
+	{
+		orderRoutes.POST("", orderHandler.PlaceOrder)
+		orderRoutes.POST("/confirm", orderHandler.ConfirmOrder)
+		orderRoutes.POST("/cancel", orderHandler.CancelOrder)
+		orderRoutes.POST("/ship", orderHandler.ShipOrder)
+		orderRoutes.GET("/:id", orderHandler.GetOrderByID)
+	}
 
 	serverAddr := ":" + cfg.HTTP.Port
 	if cfg.HTTP.Port == "" {

@@ -1,16 +1,16 @@
 package handler
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/application/port/input"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 type OrderIDRequest struct {
-	OrderID string `json:"order_id"`
+	OrderID string `json:"order_id" binding:"required"`
 }
 
 type OrderHandler struct {
@@ -37,167 +37,121 @@ func NewOrderHandler(
 	}
 }
 
-func (h *OrderHandler) PlaceOrder(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		h.respondWithError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
-	// Faz o decode direto na struct de entrada da aplicação
+func (h *OrderHandler) PlaceOrder(c *gin.Context) {
 	var req input.CreateOrderInput
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.respondWithError(w, http.StatusBadRequest, "Malformed JSON body")
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Malformed or invalid JSON body"})
 		return
 	}
 
-	// Invoca a interface da aplicação
-	resultID, err := h.placeOrderUseCase.Execute(r.Context(), req)
+	resultID, err := h.placeOrderUseCase.Execute(c.Request.Context(), req)
 	if err != nil {
-		h.respondWithError(w, http.StatusUnprocessableEntity, err.Error())
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 		return
 	}
 
-	h.respondWithJSON(w, http.StatusCreated, map[string]string{"order_id": resultID.String()})
+	c.JSON(http.StatusCreated, gin.H{"order_id": resultID.String()})
 }
 
-func (h *OrderHandler) ConfirmOrder(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		h.respondWithError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
+func (h *OrderHandler) ConfirmOrder(c *gin.Context) {
 	var req OrderIDRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.respondWithError(w, http.StatusBadRequest, "Malformed JSON body")
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Malformed or invalid JSON body"})
 		return
 	}
 
 	orderUUID, err := uuid.Parse(req.OrderID)
 	if err != nil {
-		h.respondWithError(w, http.StatusBadRequest, "Invalid order ID format")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order ID format"})
 		return
 	}
 
-	if err := h.confirmOrderUseCase.Execute(r.Context(), orderUUID); err != nil {
-		h.respondWithError(w, http.StatusUnprocessableEntity, err.Error())
+	if err := h.confirmOrderUseCase.Execute(c.Request.Context(), orderUUID); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 		return
 	}
 
-	h.respondWithJSON(w, http.StatusOK, map[string]string{"message": "Order confirmed successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Order confirmed successfully"})
 }
 
-func (h *OrderHandler) CancelOrder(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		h.respondWithError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
+func (h *OrderHandler) CancelOrder(c *gin.Context) {
 	var req OrderIDRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.respondWithError(w, http.StatusBadRequest, "Malformed JSON body")
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Malformed or invalid JSON body"})
 		return
 	}
 
 	orderUUID, err := uuid.Parse(req.OrderID)
 	if err != nil {
-		h.respondWithError(w, http.StatusBadRequest, "Invalid order ID format")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order ID format"})
 		return
 	}
 
-	if err := h.cancelOrderUseCase.Execute(r.Context(), orderUUID); err != nil {
-		h.respondWithError(w, http.StatusUnprocessableEntity, err.Error())
+	if err := h.cancelOrderUseCase.Execute(c.Request.Context(), orderUUID); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 		return
 	}
 
-	h.respondWithJSON(w, http.StatusOK, map[string]string{"message": "Order cancelled successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Order cancelled successfully"})
 }
 
-func (h *OrderHandler) ShipOrder(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		h.respondWithError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
+func (h *OrderHandler) ShipOrder(c *gin.Context) {
 	var req OrderIDRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.respondWithError(w, http.StatusBadRequest, "Malformed JSON body")
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Malformed or invalid JSON body"})
 		return
 	}
 
 	orderUUID, err := uuid.Parse(req.OrderID)
 	if err != nil {
-		h.respondWithError(w, http.StatusBadRequest, "Invalid order ID format")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order ID format"})
 		return
 	}
 
-	if err := h.shipOrderUseCase.Execute(r.Context(), orderUUID); err != nil {
-		h.respondWithError(w, http.StatusUnprocessableEntity, err.Error())
+	if err := h.shipOrderUseCase.Execute(c.Request.Context(), orderUUID); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 		return
 	}
 
-	h.respondWithJSON(w, http.StatusOK, map[string]string{"message": "Order shipped successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Order shipped successfully"})
 }
 
-func (h *OrderHandler) GetOrderByID(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		h.respondWithError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
-	idStr := r.URL.Query().Get("id")
+func (h *OrderHandler) GetOrderByID(c *gin.Context) {
+	idStr := c.Param("id") // Mudado de Query Param para Path Param (padrão RESTful elegante)
 	orderID, err := uuid.Parse(idStr)
 	if err != nil {
-		h.respondWithError(w, http.StatusBadRequest, "Invalid order ID format")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order ID format"})
 		return
 	}
 
-	orderDTO, err := h.orderQueries.GetOrderByID(r.Context(), orderID)
+	orderDTO, err := h.orderQueries.GetOrderByID(c.Request.Context(), orderID)
 	if err != nil {
-		h.respondWithError(w, http.StatusNotFound, "Order not found")
+		c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
 		return
 	}
 
-	h.respondWithJSON(w, http.StatusOK, orderDTO)
+	c.JSON(http.StatusOK, orderDTO)
 }
 
-func (h *OrderHandler) ListOrders(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		h.respondWithError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
-	q := r.URL.Query()
-	limit, _ := strconv.Atoi(q.Get("limit"))
-	if limit <= 0 {
-		limit = 10
-	}
-	offset, _ := strconv.Atoi(q.Get("offset"))
+func (h *OrderHandler) ListOrders(c *gin.Context) {
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
 
 	var customerID *uuid.UUID
-	if cidStr := q.Get("customer_id"); cidStr != "" {
+	if cidStr := c.Query("customer_id"); cidStr != "" {
 		if cid, err := uuid.Parse(cidStr); err == nil {
 			customerID = &cid
 		} else {
-			h.respondWithError(w, http.StatusBadRequest, "Invalid customer ID format")
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid customer ID format"})
 			return
 		}
 	}
 
-	orders, err := h.orderQueries.ListOrders(r.Context(), customerID, limit, offset)
+	orders, err := h.orderQueries.ListOrders(c.Request.Context(), customerID, limit, offset)
 	if err != nil {
-		h.respondWithError(w, http.StatusInternalServerError, "Failed to list orders")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list orders"})
 		return
 	}
 
-	h.respondWithJSON(w, http.StatusOK, orders)
-}
-
-func (h *OrderHandler) respondWithError(w http.ResponseWriter, code int, message string) {
-	h.respondWithJSON(w, code, map[string]string{"error": message})
-}
-
-func (h *OrderHandler) respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	_ = json.NewEncoder(w).Encode(payload)
+	c.JSON(http.StatusOK, orders)
 }

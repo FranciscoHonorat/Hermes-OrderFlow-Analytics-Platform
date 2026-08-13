@@ -62,6 +62,30 @@ func TestCustomerID(t *testing.T) {
 		}
 	})
 
+	t.Run("Test for ParseCustomerID", func(t *testing.T) {
+		id1 := uuid.New()
+		tests := []struct {
+			name          string
+			idStr         string
+			expectedID    uuid.UUID
+			expectedError error
+		}{
+			{"Valid ID", id1.String(), id1, nil},
+			{"Invalid ID", "invalid-uuid", uuid.Nil, domainErrors.ErrInvalidCustomerID},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				c, err := customer.ParseCustomerID(tt.idStr)
+
+				assert.ErrorIs(t, err, tt.expectedError)
+
+				if tt.expectedError == nil {
+					assert.Equal(t, tt.expectedID, c.ID())
+				}
+			})
+		}
+	})
+
 	t.Run("Test for MarhsalJSON", func(t *testing.T) {
 		id1 := uuid.New()
 		tests := []struct {

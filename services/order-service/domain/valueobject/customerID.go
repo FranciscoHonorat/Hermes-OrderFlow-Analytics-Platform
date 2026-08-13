@@ -27,6 +27,15 @@ func NewCustomerIDMust(id uuid.UUID) CustomerID {
 	return m
 }
 
+func ParseCustomerID(idStr string) (CustomerID, error) {
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		return CustomerID{}, domainErrors.ErrInvalidCustomerID
+	}
+
+	return NewCustomerID(id)
+}
+
 func (c CustomerID) ID() uuid.UUID {
 	return c.id
 }

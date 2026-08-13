@@ -70,6 +70,31 @@ func TestMoney(t *testing.T) {
 		}
 	})
 
+	t.Run("Test for NewMoneyFromAmount", func(t *testing.T) {
+		tests := []struct {
+			name          string
+			amount        int64
+			expectedError error
+		}{
+			{"Valid Money", 100, nil},
+			{"Negative Amount", -50, domainErrors.ErrNegativeAmount},
+			{"Zero Amount", 0, domainErrors.ErrNegativeAmount},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				m, err := money.NewMoneyFromAmount(tt.amount)
+
+				assert.ErrorIs(t, err, tt.expectedError)
+
+				if tt.expectedError == nil {
+					require.NotNil(t, m)
+					assert.Equal(t, tt.amount, m.Amount())
+					assert.Equal(t, "BRL", m.Currency())
+				}
+			})
+		}
+	})
+
 	t.Run("Test Money Amount and Currency methods", func(t *testing.T) {
 		tests := []struct {
 			name     string

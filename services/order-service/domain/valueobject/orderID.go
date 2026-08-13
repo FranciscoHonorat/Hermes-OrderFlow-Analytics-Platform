@@ -27,6 +27,15 @@ func NewOrderIDMust(id uuid.UUID) OrderID {
 	return orderID
 }
 
+func ParseOrderID(idStr string) (OrderID, error) {
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		return OrderID{}, domainErrors.ErrInvalidOrderID
+	}
+
+	return NewOrderID(id)
+}
+
 func (o OrderID) ID() uuid.UUID {
 	return o.id
 }

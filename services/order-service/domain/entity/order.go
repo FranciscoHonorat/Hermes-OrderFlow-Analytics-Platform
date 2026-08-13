@@ -48,6 +48,19 @@ func NewOrderMust(id valueobject.OrderID, customerID valueobject.CustomerID) *Or
 	return order
 }
 
+func RestoreOrder(id valueobject.OrderID, customerID valueobject.CustomerID, totalPrice valueobject.Money, items []valueobject.OrderItem, address valueobject.Address, status valueobject.OrderStatus, createdAt time.Time, updatedAt time.Time) (*Order, error) {
+	return &Order{
+		id:         id,
+		customerID: customerID,
+		totalPrice: totalPrice,
+		items:      items,
+		address:    address,
+		status:     status,
+		createdAt:  createdAt,
+		updatedAt:  updatedAt,
+	}, nil
+}
+
 func (o *Order) recalculateTotal() error {
 	if len(o.items) == 0 {
 		o.totalPrice = valueobject.Money{} // Reset total price to zero if there are no items

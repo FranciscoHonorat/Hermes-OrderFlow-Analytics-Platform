@@ -45,6 +45,16 @@ func NewMoneyMust(amount int64, currency string) Money {
 	return m
 }
 
+func NewMoneyFromAmount(amount int64) (Money, error) {
+	if err := validateMoney(amount, "BRL"); err != nil {
+		return Money{}, err
+	}
+	return Money{
+		amount:   amount,
+		currency: "BRL",
+	}, nil
+}
+
 func (m Money) Validate() error {
 	return validateMoney(m.amount, m.currency)
 }

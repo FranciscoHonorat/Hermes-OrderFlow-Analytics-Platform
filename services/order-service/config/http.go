@@ -69,3 +69,13 @@ func (s *HTTPServer) Start() error {
 func (s *HTTPServer) Stop(ctx context.Context) error {
 	return s.server.Shutdown(ctx)
 }
+
+func loadHTTPConfig() (*HTTPServerConfig, error) {
+	port := getEnv("HTTP_PORT", "8080")
+	mode := getEnv("HTTP_MODE", "release")
+
+	return &HTTPServerConfig{
+		Port: port,
+		Mode: mode,
+	}, nil
+}

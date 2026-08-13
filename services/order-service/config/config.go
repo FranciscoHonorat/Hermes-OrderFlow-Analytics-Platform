@@ -1,12 +1,15 @@
 package config
 
-import "sync"
+import (
+	"log"
+	"sync"
+)
 
 type Config struct {
 	Env       string
-	HTTP      HTTPConfig
-	Database  DatabaseConfig
-	Messaging MessagingConfig
+	HTTP      *HTTPServerConfig
+	Database  *DatabaseConfig
+	Messaging *MessagingConfig
 }
 
 var (
@@ -16,14 +19,37 @@ var (
 
 func Get() *Config {
 	once.Do(func() {
-		instance = &Config{}
-
-		instance.Env = "development"
-
-		instance.HTTP = LoadHTTPConfig()
-		instance.Database = LoadDatabaseConfig()
-		instance.Messaging = LoadMessagingConfig()
+		cfg, err := loadConfig()
+		if err != nil {
+			log.Fatalf("Failed to load config: %v", err)
+		}
+		instance = cfg
 	})
-
 	return instance
+}
+
+func loadConfig() (*Config, error) {
+	env := getEnv("APP_ENV", "development")
+
+	httpConfig, err := loadHTTPConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	dbConfig, err := loadDatabaseConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	messagingConfig, err := loadMessagingConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	return &Config{
+		Env:       env,
+		HTTP:      httpConfig,
+		Database:  &dbConfig,
+		Messaging: &messagingConfig,
+	}, nil
 }

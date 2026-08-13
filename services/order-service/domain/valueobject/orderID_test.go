@@ -34,6 +34,31 @@ func TestOrderID(t *testing.T) {
 		}
 	})
 
+	t.Run("Test for ParseOrderID", func(t *testing.T) {
+		validUUID := uuid.New()
+		tests := []struct {
+			name          string
+			idStr         string
+			expectedID    uuid.UUID
+			expectedError error
+		}{
+			{"Valid UUID", validUUID.String(), validUUID, nil},
+			{"Invalid UUID", "invalid-uuid", uuid.Nil, domainErrors.ErrInvalidOrderID},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				orderID, err := orderid.ParseOrderID(tt.idStr)
+
+				assert.ErrorIs(t, err, tt.expectedError)
+
+				if tt.expectedError == nil {
+					assert.Equal(t, tt.expectedID, orderID.ID())
+				}
+			})
+		}
+	})
+
 	t.Run("Test for String method", func(t *testing.T) {
 		id := uuid.New()
 		orderIDObj, err := orderid.NewOrderID(id)

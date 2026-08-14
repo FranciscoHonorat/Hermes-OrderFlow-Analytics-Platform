@@ -1,0 +1,37 @@
+# Binários e artifacts Go
+/bin/
+/bin
+*.exe
+*.test
+*.prof
+*.out
+coverage.out
+
+# Dependências e vendor
+vendor/
+
+# Build / generated
+*.generated.go
+
+# IDEs e editores
+.vscode/
+.idea/
+*.iml
+
+# Env
+.env
+.env.local
+
+# Docker
+docker-compose.override.yml
+
+# Logs
+*.log
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Misc
+node_modules/
+dist/

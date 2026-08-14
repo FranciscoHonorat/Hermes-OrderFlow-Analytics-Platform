@@ -3,6 +3,8 @@ package valueobject
 import (
 	"encoding/json"
 	"fmt"
+
+	domainErrors "github.com/FranciscoHonorat/ordemflow/services/order-service/domain/domain-errors"
 )
 
 type OrderStatus string
@@ -41,7 +43,7 @@ func (s *OrderStatus) UnmarshalJSON(data []byte) error {
 	}
 	orderStatus := OrderStatus(status)
 	if !orderStatus.IsValid() {
-		return fmt.Errorf("invalid order status: %s", status)
+		return fmt.Errorf("invalid order status: %w", domainErrors.ErrInvalidOrderStatus)
 	}
 	*s = orderStatus
 	return nil

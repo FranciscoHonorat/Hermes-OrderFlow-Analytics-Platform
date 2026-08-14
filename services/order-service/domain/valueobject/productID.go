@@ -38,6 +38,10 @@ func (p ProductID) Equal(o ProductID) bool {
 	return p.id == o.id
 }
 
+func (p ProductID) IsZero() bool {
+	return p.id == uuid.Nil
+}
+
 func (p ProductID) MarshalJSON() ([]byte, error) {
 	auxProduct := struct {
 		ID string `json:"id"`

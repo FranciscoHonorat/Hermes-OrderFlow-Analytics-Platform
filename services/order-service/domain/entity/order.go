@@ -87,13 +87,26 @@ func (o *Order) recalculateTotal() error {
 }
 
 func (o *Order) AddItem(item valueobject.OrderItem) error {
+	for _, existingItem := range o.items {
+		if existingItem.ProductID().Equal(item.ProductID()) {
+			return domainErrors.ErrDuplicateOrderItem
+		}
+	}
+	if len(o.items) > 0 {
+		existingCurrency := o.items[0].UnitPrice().Currency()
+		itemCurrency := item.UnitPrice().Currency()
+		if existingCurrency != itemCurrency {
+			return domainErrors.ErrCurrencyMismatch
+		}
+	}
+
 	previous := make([]valueobject.OrderItem, len(o.items))
 	copy(previous, o.items)
 	o.items = append(o.items, item)
 
 	if err := o.recalculateTotal(); err != nil {
 		o.items = previous
-		return err
+		return fmt.Errorf("failed to recalculate total after adding item: %w", err)
 	}
 	return nil
 }
@@ -175,19 +188,31 @@ func (o *Order) PullEvents() []event.DomainEvent {
 
 }
 
-func (o *Order) Ship(now time.Time) error {
+func (o *Order) Ship(shipmentID, carrier, trackingNumber string, now time.Time) error {
 	if !o.status.IsValid() {
 		return domainErrors.ErrCorruptedOrder
 	}
-	if o.status != valueobject.OrderStatusConfirmed {
+
+	// Validação explicita do fluxo de status
+	if o.status == valueobject.OrderStatusShipped {
 		return domainErrors.ErrOrderAlreadyShipped
+	}
+	if o.status != valueobject.OrderStatusConfirmed {
+		return domainErrors.ErrOrderCannotBeShipped
 	}
 
 	o.status = valueobject.OrderStatusShipped
 	o.updatedAt = now.UTC()
 
-	evt := event.NewOrderShipped(o.id.String(), now)
+	evt := event.NewOrderShipped(
+		o.id.String(),
+		shipmentID,
+		carrier,
+		trackingNumber,
+		now.UTC(),
+	)
 	o.addEvent(evt)
+
 	return nil
 }
 

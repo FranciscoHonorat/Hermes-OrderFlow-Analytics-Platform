@@ -3,6 +3,7 @@ package event
 import (
 	"time"
 
+	domainErrors "github.com/FranciscoHonorat/ordemflow/services/order-service/domain/domain-errors"
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/domain/valueobject"
 )
 
@@ -26,4 +27,23 @@ func NewOrderAdded(orderID valueobject.OrderID, productID valueobject.ProductID,
 		UnitPrice:  unitPrice,
 		TotalPrice: totalPrice,
 	}
+}
+
+func (event OrderAdded) ValidateOrderAdded() error {
+	if event.OrderID.IsZero() {
+		return domainErrors.ErrInvalidOrderID
+	}
+	if event.ProductID.IsZero() {
+		return domainErrors.ErrInvalidProductID
+	}
+	if err := event.Quantity.Validate(); err != nil {
+		return err
+	}
+	if err := event.UnitPrice.Validate(); err != nil {
+		return err
+	}
+	if err := event.TotalPrice.Validate(); err != nil {
+		return err
+	}
+	return nil
 }

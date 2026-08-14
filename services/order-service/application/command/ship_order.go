@@ -2,15 +2,18 @@ package command
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/application/port/output"
+	domainErrors "github.com/FranciscoHonorat/ordemflow/services/order-service/domain/domain-errors"
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/domain/valueobject"
 	"github.com/google/uuid"
 )
 
 type ShipOrderCommand struct {
-	OrderID string
+	OrderID        string
+	ShipmentID     string
+	Carrier        string
+	TrackingNumber string
 }
 
 type ShipOrderResult struct {
@@ -47,12 +50,12 @@ func (h *ShipOrderHandler) Handle(ctx context.Context, cmd ShipOrderCommand) err
 		}
 
 		if order == nil {
-			return fmt.Errorf("order with ID %s not found", orderID.String())
+			return domainErrors.ErrOrderNotFound
 		}
 
 		now := h.clock.Now()
 
-		if err := order.Ship(now); err != nil {
+		if err := order.Ship(cmd.ShipmentID, cmd.Carrier, cmd.TrackingNumber, now); err != nil {
 			return err
 		}
 
@@ -68,5 +71,4 @@ func (h *ShipOrderHandler) Handle(ctx context.Context, cmd ShipOrderCommand) err
 
 		return nil
 	})
-
 }

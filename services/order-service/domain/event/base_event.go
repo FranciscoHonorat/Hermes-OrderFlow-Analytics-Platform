@@ -1,6 +1,9 @@
 package event
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 type DomainEvent interface {
 	EventName() string
@@ -20,6 +23,19 @@ func NewBaseEvent(name, aggregateId string, occurredAt time.Time) BaseEvent {
 		occurredAt:  occurredAt,
 		aggregateId: aggregateId,
 	}
+}
+
+func (b BaseEvent) Validate() error {
+	if b.eventName == "" {
+		return fmt.Errorf("event name cannot be empty")
+	}
+	if b.aggregateId == "" {
+		return fmt.Errorf("aggregate ID cannot be empty")
+	}
+	if b.occurredAt.IsZero() {
+		return fmt.Errorf("occurred at time cannot be zero")
+	}
+	return nil
 }
 
 func (b BaseEvent) EventName() string     { return b.eventName }

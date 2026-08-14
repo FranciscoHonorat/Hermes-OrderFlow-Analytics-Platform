@@ -25,6 +25,13 @@ func NewQuantityMust(value int64) Quantity {
 	return q
 }
 
+func (q Quantity) Validate() error {
+	if q.value <= 0 {
+		return domainErrors.ErrInvalidQuantity
+	}
+	return nil
+}
+
 func (q Quantity) Value() int64 {
 	return q.value
 }
@@ -34,27 +41,20 @@ func (q Quantity) Equal(o Quantity) bool {
 }
 
 func (q Quantity) MarshalJSON() ([]byte, error) {
-	auxQuantity := struct {
-		Value int64 `json:"value"`
-	}{
-		Value: q.value,
-	}
-	return json.Marshal(auxQuantity)
+	return json.Marshal(q.value)
 }
 
 func (q *Quantity) UnmarshalJSON(data []byte) error {
-	var quantity struct {
-		Value int64 `json:"value"`
-	}
+	var value int64
 
-	if err := json.Unmarshal(data, &quantity); err != nil {
+	if err := json.Unmarshal(data, &value); err != nil {
 		return err
 	}
 
-	if quantity.Value <= 0 {
+	if value <= 0 {
 		return domainErrors.ErrInvalidQuantity
 	}
 
-	q.value = quantity.Value
+	q.value = value
 	return nil
 }

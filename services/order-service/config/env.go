@@ -22,9 +22,9 @@ func getRequiredEnv(key string) (string, error) {
 }
 
 func lookupNonEmptyEnv(key string) (string, bool) {
-	values, exists := os.LookupEnv(key)
-	if !exists || values == "" {
+	value, exists := os.LookupEnv(key)
+	if !exists || value == "" {
 		return "", false
 	}
-	return values, true
+	return value, true
 }

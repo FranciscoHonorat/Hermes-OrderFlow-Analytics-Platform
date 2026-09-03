@@ -21,6 +21,16 @@ func TestEnv(t *testing.T) {
 		})
 
 		t.Run("Test missing env", func(t *testing.T) {
+			value, exists := os.LookupEnv("APP_ENV")
+
+			t.Cleanup(func() {
+				if exists {
+					os.Setenv("APP_ENV", value)
+				} else {
+					os.Unsetenv("APP_ENV")
+				}
+			})
+
 			os.Unsetenv("APP_ENV")
 			env := getEnv("APP_ENV", "development")
 			assert.Equal(t, "development", env)
@@ -47,6 +57,16 @@ func TestEnv(t *testing.T) {
 		})
 
 		t.Run("Test missing env", func(t *testing.T) {
+			value, exists := os.LookupEnv("APP_ENV")
+
+			t.Cleanup(func() {
+				if exists {
+					os.Setenv("APP_ENV", value)
+				} else {
+					os.Unsetenv("APP_ENV")
+				}
+			})
+
 			os.Unsetenv("APP_ENV")
 			_, err := getRequiredEnv("APP_ENV")
 			assert.Error(t, err)

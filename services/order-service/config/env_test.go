@@ -31,6 +31,12 @@ func TestEnv(t *testing.T) {
 			env := getEnv("APP_ENV", "development")
 			assert.Equal(t, "development", env)
 		})
+
+		t.Run("Test set env with two spaces", func(t *testing.T) {
+			t.Setenv("APP_ENV", "  ")
+			env := getEnv("APP_ENV", "development")
+			assert.Equal(t, "  ", env)
+		})
 	})
 	t.Run("Test all scenarios for getRequiredEnv", func(t *testing.T) {
 		t.Run("Test set env", func(t *testing.T) {
@@ -50,6 +56,13 @@ func TestEnv(t *testing.T) {
 			t.Setenv("APP_ENV", "")
 			_, err := getRequiredEnv("APP_ENV")
 			assert.Error(t, err)
+		})
+
+		t.Run("Test set env with two spaces", func(t *testing.T) {
+			t.Setenv("APP_ENV", "  ")
+			env, err := getRequiredEnv("APP_ENV")
+			assert.NoError(t, err)
+			assert.Equal(t, "  ", env)
 		})
 	})
 }

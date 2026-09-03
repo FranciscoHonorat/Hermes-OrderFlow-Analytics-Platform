@@ -6,16 +6,25 @@ import (
 )
 
 func getEnv(key string, fallback string) string {
-	if value, exists := os.LookupEnv(key); exists && value != "" {
-		return value
+	value, ok := lookupNonEmptyEnv(key)
+	if !ok {
+		return fallback
 	}
-	return fallback
+	return value
 }
 
 func getRequiredEnv(key string) (string, error) {
-	value, exists := os.LookupEnv(key)
-	if !exists || value == "" {
-		return "", fmt.Errorf("required environment variable not set: %s", key)
+	value, ok := lookupNonEmptyEnv(key)
+	if !ok {
+		return "", fmt.Errorf("environment variable %s is required but not set or empty", key)
 	}
 	return value, nil
+}
+
+func lookupNonEmptyEnv(key string) (string, bool) {
+	value, exists := os.LookupEnv(key)
+	if !exists || value == "" {
+		return "", false
+	}
+	return value, true
 }

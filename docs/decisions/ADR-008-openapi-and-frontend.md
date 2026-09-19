@@ -134,13 +134,16 @@ exatamente o problema que o proxy de desenvolvimento evita hoje.
 
 ## Security Considerations
 
-`order-service` e `inventory-service` não têm autenticação própria
-(ver ADR-007) — o login do frontend é um gate de UX da aplicação Vue,
-não uma garantia de segurança desses dois backends, que continuam
-acessíveis diretamente via HTTP a qualquer cliente. As telas de
-Estoque e Pedidos do frontend exibem um aviso explícito sobre isso
-(`SecurityNoticeBanner`), para não sugerir uma proteção que não existe
-no backend.
+**Atualizado em 2026-09-19**: `order-service` e `inventory-service`
+não tinham autenticação própria quando este ADR foi escrito — o login
+do frontend era só um gate de UX da aplicação Vue, sem nenhuma
+garantia de segurança real nesses dois backends. Isso foi resolvido
+(ver ADR-005 "Update" e ADR-007 "Update"): os dois agora exigem o
+mesmo JWT do `user-service`. O `SecurityNoticeBanner` do frontend, que
+avisava sobre essa lacuna, foi removido por não ser mais verdadeiro —
+nenhuma outra mudança foi necessária no frontend, já que
+`api/http.ts` sempre enviou o header `Authorization` para os três
+serviços.
 
 ## Related Decisions
 

@@ -13,6 +13,7 @@ import (
 	"github.com/FranciscoHonorat/ordemflow/services/user-service/internal/application/port/input"
 	"github.com/FranciscoHonorat/ordemflow/services/user-service/internal/infrastructure/http/handler"
 	"github.com/FranciscoHonorat/ordemflow/services/user-service/internal/infrastructure/http/middleware"
+	"github.com/FranciscoHonorat/ordemflow/shared/auth"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 )
@@ -170,7 +171,7 @@ func TestUserHandler_GetMe(t *testing.T) {
 		h := handler.NewUserHandler(queries, &mockChangeRoleUseCase{}, &mockActivateUseCase{}, &mockDeactivateUseCase{})
 
 		w, c := newJSONContext(t, "GET", "/users/me", nil)
-		c.Set(middleware.ClaimsKey, middleware.Claims{UserID: "user-1", Role: "user"})
+		c.Set(middleware.ClaimsKey, auth.Claims{UserID: "user-1", Role: "user"})
 		h.GetMe(c)
 
 		require.Equal(t, 200, w.Code)

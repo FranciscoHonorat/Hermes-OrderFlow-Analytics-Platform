@@ -168,9 +168,37 @@ segurança de ADR-003 (payload de eventos em texto claro) e ADR-004
 (TLS/autenticação no Kafka) continuam valendo, agora centralizadas em
 um único ponto de implementação.
 
+## Update (2026-09-19) — shared/auth
+
+Um quinto pacote entrou no shared kernel pela regra dos três:
+`shared/auth`, com `Claims`, `Issue` e `Verify` para JWT (HS256). Até
+este ponto, só o `user-service` (ADR-007) verificava token — o
+`order-service` e o `inventory-service` não tinham autenticação
+própria nenhuma. Ao estendê-la para os dois, a lógica de emissão e
+verificação (antes só em
+`user-service/internal/infrastructure/security/jwt_issuer.go`) foi
+extraída para `shared/auth`, e o `user-service` passou a delegar a ela
+em vez de manter sua própria cópia — mesmo padrão já usado para
+`shared/postgres` acima: extrair só quando um terceiro consumidor
+realmente precisa do mesmo código, não antecipadamente.
+
+`order-service` e `inventory-service` ganham cada um um
+`infrastructure/security.JWTVerifier` (só `Verify`, já que nenhum dos
+dois emite token — quem emite é sempre o `user-service`) e um
+middleware `Auth` idêntico em formato ao que já existia no
+`user-service`. Os três serviços compartilham o mesmo `JWT_SECRET` via
+`docker-compose.yml` — um único emissor, múltiplos verificadores.
+
+    shared/auth (Claims, Issue, Verify)
+      ↑              ↑                ↑
+    user-service   order-service   inventory-service
+    (emite e       (só verifica)   (só verifica)
+     verifica)
+
 ## Related Decisions
 
 - ADR-002 — Uso de Hexagonal Architecture
 - ADR-003 — Uso de Transactional Outbox
 - ADR-004 — Uso de Kafka
 - ADR-006 — cdc-connector como relay de polling do Outbox
+- ADR-007 — user-service: autenticação, hashing e bounded context dedicado

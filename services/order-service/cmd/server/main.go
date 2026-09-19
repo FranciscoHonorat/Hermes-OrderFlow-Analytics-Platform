@@ -13,6 +13,7 @@ import (
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/infrastructure/http/middleware"
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/infrastructure/persistence"
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/infrastructure/persistence/postgres"
+	"github.com/FranciscoHonorat/ordemflow/services/order-service/infrastructure/security"
 	"github.com/FranciscoHonorat/ordemflow/shared/outbox"
 	"github.com/gin-gonic/gin"
 )
@@ -85,7 +86,10 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"status": "healthy", "time": time.Now().UTC()})
 	})
 
+	verifier := security.NewJWTVerifier(cfg.JWT.Secret)
+
 	orderRoutes := r.Group("/orders")
+	orderRoutes.Use(middleware.Auth(verifier))
 	{
 		orderRoutes.POST("", orderHandler.PlaceOrder)
 		orderRoutes.GET("", orderHandler.ListOrders)

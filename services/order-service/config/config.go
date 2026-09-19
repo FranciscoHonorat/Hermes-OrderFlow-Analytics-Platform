@@ -10,6 +10,7 @@ type Config struct {
 	HTTP      *HTTPServerConfig
 	Database  *DatabaseConfig
 	Messaging *MessagingConfig
+	JWT       JWTConfig
 }
 
 var (
@@ -46,10 +47,16 @@ func loadConfig() (*Config, error) {
 		return nil, err
 	}
 
+	jwtConfig, err := loadJWTConfig()
+	if err != nil {
+		return nil, err
+	}
+
 	return &Config{
 		Env:       env,
 		HTTP:      httpConfig,
 		Database:  &dbConfig,
 		Messaging: &messagingConfig,
+		JWT:       jwtConfig,
 	}, nil
 }

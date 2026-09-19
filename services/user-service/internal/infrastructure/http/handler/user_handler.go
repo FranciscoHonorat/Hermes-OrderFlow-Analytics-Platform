@@ -5,6 +5,7 @@ import (
 
 	"github.com/FranciscoHonorat/ordemflow/services/user-service/internal/application/port/input"
 	"github.com/FranciscoHonorat/ordemflow/services/user-service/internal/infrastructure/http/middleware"
+	"github.com/FranciscoHonorat/ordemflow/shared/auth"
 	"github.com/gin-gonic/gin"
 )
 
@@ -36,7 +37,7 @@ func (h *UserHandler) GetMe(c *gin.Context) {
 		return
 	}
 
-	claims, ok := value.(middleware.Claims)
+	claims, ok := value.(auth.Claims)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing authentication"})
 		return

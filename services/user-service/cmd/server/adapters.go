@@ -5,21 +5,7 @@ import (
 
 	"github.com/FranciscoHonorat/ordemflow/services/user-service/internal/application/command"
 	"github.com/FranciscoHonorat/ordemflow/services/user-service/internal/application/port/input"
-	"github.com/FranciscoHonorat/ordemflow/services/user-service/internal/infrastructure/http/middleware"
-	"github.com/FranciscoHonorat/ordemflow/services/user-service/internal/infrastructure/security"
 )
-
-type tokenVerifierAdapter struct {
-	issuer *security.JWTIssuer
-}
-
-func (a *tokenVerifierAdapter) Verify(token string) (middleware.Claims, error) {
-	claims, err := a.issuer.Verify(token)
-	if err != nil {
-		return middleware.Claims{}, err
-	}
-	return middleware.Claims{UserID: claims.UserID, Role: claims.Role}, nil
-}
 
 type registerUserUseCaseAdapter struct {
 	handler *command.RegisterUserHandler

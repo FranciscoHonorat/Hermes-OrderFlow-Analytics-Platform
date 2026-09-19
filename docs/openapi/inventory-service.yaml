@@ -30,6 +30,7 @@ paths:
     post:
       summary: Reservar quantidade de um SKU
       tags: [Stock]
+      security: [{ bearerAuth: [] }]
       requestBody:
         required: true
         content:
@@ -38,12 +39,14 @@ paths:
       responses:
         "200": { $ref: "#/components/responses/MessageOK" }
         "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
         "422": { $ref: "#/components/responses/UnprocessableEntity" }
 
   /stock/release:
     post:
       summary: Liberar quantidade previamente reservada de um SKU
       tags: [Stock]
+      security: [{ bearerAuth: [] }]
       requestBody:
         required: true
         content:
@@ -52,12 +55,14 @@ paths:
       responses:
         "200": { $ref: "#/components/responses/MessageOK" }
         "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
         "422": { $ref: "#/components/responses/UnprocessableEntity" }
 
   /stock/replenish:
     post:
       summary: Repor quantidade disponível de um SKU
       tags: [Stock]
+      security: [{ bearerAuth: [] }]
       requestBody:
         required: true
         content:
@@ -66,12 +71,14 @@ paths:
       responses:
         "200": { $ref: "#/components/responses/MessageOK" }
         "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
         "422": { $ref: "#/components/responses/UnprocessableEntity" }
 
   /stock/low:
     get:
       summary: Listar itens com estoque abaixo do mínimo
       tags: [Stock]
+      security: [{ bearerAuth: [] }]
       responses:
         "200":
           description: Lista de itens em baixo estoque (array vazio se nenhum)
@@ -80,12 +87,14 @@ paths:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/StockDTO" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
         "500": { $ref: "#/components/responses/InternalError" }
 
   /stock/{sku}:
     get:
       summary: Buscar item de estoque por SKU
       tags: [Stock]
+      security: [{ bearerAuth: [] }]
       parameters:
         - name: sku
           in: path
@@ -97,9 +106,20 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/StockDTO" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        Mesmo JWT emitido por POST /auth/login no user-service (ver
+        ADR-005 "Update" — shared/auth). Este serviço só verifica, não
+        emite token.
+
   schemas:
     StockDTO:
       type: object
@@ -133,6 +153,11 @@ components:
               message: { type: string }
     BadRequest:
       description: Corpo malformado ou campo obrigatório ausente
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unauthorized:
+      description: Token ausente, malformado ou inválido/expirado
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }

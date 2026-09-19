@@ -46,6 +46,7 @@ R5 — Concurrent reservations on the same SKU may lead to an inconsistent state
 R6 — Internal errors may leak information
 R7 — Future changes may break existing behavior
 R8 — A domain event written to the outbox may never reach Kafka if the `cdc-connector` relay is down or missing (see ADR-003, LEARNING-004)
+R9 — API may accept requests without a valid JWT (added 2026-09-19, see ADR-005 "Update" — shared/auth)
 
 ## Coverage so far
 
@@ -56,7 +57,8 @@ Unit tests:
 - `internal/domain/stock/stockItem_test.go`: constructor validation, `Reserve`/`Release`/`Replenish` happy and failure paths, event emission (including `LowStockDetected`), and that a failed `Reserve` leaves state and events untouched (mitigates R1, R2).
 - `internal/application/command/stock_commands_test.go`: command handlers against mocked repository/outbox/unit of work — verifies events are drained to the outbox only on success, and that no partial state is saved on failure (mitigates R1, R2, R8's write side).
 - `internal/infrastructure/http/handler/stock_handler_test.go`: HTTP handlers against mocked use cases/queries — malformed body → 400, use case error → 422, not found → 404, query error → 500 (mitigates R3, R4).
-- `internal/config/env_test.go`: `getEnv`/`getRequiredEnv` edge cases (missing, empty, whitespace-only values).
+- `internal/config/env_test.go`: `getEnv`/`getRequiredEnv` edge cases (missing, empty, whitespace-only values); `loadJWTConfig` fails closed when `JWT_SECRET` is unset (mitigates R9).
+- `internal/infrastructure/http/middleware/auth_test.go` (added 2026-09-19): valid token → 200, missing/malformed header → 401, invalid token → 401 (mitigates R9). Same pattern as `user-service`'s own middleware test.
 
 Integration tests (build tag `integration`, real Postgres via testcontainers):
 
@@ -70,3 +72,4 @@ Integration tests (build tag `integration`, real Postgres via testcontainers):
 - R5 (concurrency): `StockRepository.Save` does a plain `ON CONFLICT DO UPDATE`, with no row-level locking or optimistic concurrency check (e.g. a version column). Two concurrent `Reserve` calls on the same SKU can both read the same `available` value before either writes — a lost-update race, not covered by the current integration suite (it doesn't run concurrent requests). Worth revisiting once load testing is in scope.
 - R6: no test asserts that error responses avoid leaking internal details (today `c.JSON(..., gin.H{"error": err.Error()})` forwards the raw Go error string to the client).
 - R8: `FetchUnprocessed`/`MarkProcessed` are now integration-tested directly, but the actual relay loop (polling + publish + mark) only exists once the `cdc-connector` (Fase 2 of the roadmap) is implemented.
+- R9: manually verified against the real `docker-compose` stack — `GET /stock/low` without a token → 401; with a JWT issued by `user-service` → 200 (cross-service token verification, not just same-service). No automated end-to-end test covers this cross-service path yet, only the middleware unit test with a fake verifier.

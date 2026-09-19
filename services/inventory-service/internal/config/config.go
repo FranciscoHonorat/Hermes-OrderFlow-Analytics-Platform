@@ -9,6 +9,7 @@ type Config struct {
 	Env      string
 	HTTP     *HTTPServerConfig
 	Database *DatabaseConfig
+	JWT      JWTConfig
 }
 
 var (
@@ -40,9 +41,15 @@ func loadConfig() (*Config, error) {
 		return nil, err
 	}
 
+	jwtConfig, err := loadJWTConfig()
+	if err != nil {
+		return nil, err
+	}
+
 	return &Config{
 		Env:      env,
 		HTTP:     httpConfig,
 		Database: &dbConfig,
+		JWT:      jwtConfig,
 	}, nil
 }

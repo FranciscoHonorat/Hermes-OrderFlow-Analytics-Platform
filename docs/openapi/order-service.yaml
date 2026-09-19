@@ -34,6 +34,7 @@ paths:
     post:
       summary: Colocar um novo pedido
       tags: [Orders]
+      security: [{ bearerAuth: [] }]
       requestBody:
         required: true
         content:
@@ -53,11 +54,14 @@ paths:
                     format: uuid
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
     get:
       summary: Listar pedidos
       tags: [Orders]
+      security: [{ bearerAuth: [] }]
       parameters:
         - name: limit
           in: query
@@ -80,6 +84,8 @@ paths:
                   $ref: "#/components/schemas/OrderDTO"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -87,6 +93,7 @@ paths:
     get:
       summary: Buscar pedido por ID
       tags: [Orders]
+      security: [{ bearerAuth: [] }]
       parameters:
         - name: id
           in: path
@@ -101,6 +108,8 @@ paths:
                 $ref: "#/components/schemas/OrderDTO"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -112,6 +121,7 @@ paths:
         param — decisão deliberada de design já existente no serviço,
         documentada aqui tal como implementada.
       tags: [Orders]
+      security: [{ bearerAuth: [] }]
       requestBody:
         required: true
         content:
@@ -123,6 +133,8 @@ paths:
           $ref: "#/components/responses/MessageOK"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
@@ -130,6 +142,7 @@ paths:
     post:
       summary: Cancelar um pedido
       tags: [Orders]
+      security: [{ bearerAuth: [] }]
       requestBody:
         required: true
         content:
@@ -141,6 +154,8 @@ paths:
           $ref: "#/components/responses/MessageOK"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
@@ -148,6 +163,7 @@ paths:
     post:
       summary: Marcar um pedido como enviado
       tags: [Orders]
+      security: [{ bearerAuth: [] }]
       requestBody:
         required: true
         content:
@@ -159,10 +175,22 @@ paths:
           $ref: "#/components/responses/MessageOK"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        Mesmo JWT emitido por POST /auth/login no user-service (ver
+        ADR-005 "Update" — shared/auth). Este serviço só verifica, não
+        emite token.
+
   schemas:
     OrderStatus:
       type: string
@@ -243,6 +271,11 @@ components:
               message: { type: string }
     BadRequest:
       description: Corpo malformado ou ID inválido
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unauthorized:
+      description: Token ausente, malformado ou inválido/expirado
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }

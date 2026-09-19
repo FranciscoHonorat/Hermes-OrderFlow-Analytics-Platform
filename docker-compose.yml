@@ -120,6 +120,7 @@ services:
       MESSAGING_BROKER: kafka:9092
       MESSAGING_CLIENT_ID: order-service
       MESSAGING_WRITE_TIMEOUT: 5s
+      JWT_SECRET: dev-only-secret-change-me
     ports:
       - "8080:8080"
 
@@ -144,6 +145,7 @@ services:
       DB_PASSWORD: postgres
       DB_NAME: inventory
       DB_SSLMODE: disable
+      JWT_SECRET: dev-only-secret-change-me
     ports:
       - "8081:8081"
 

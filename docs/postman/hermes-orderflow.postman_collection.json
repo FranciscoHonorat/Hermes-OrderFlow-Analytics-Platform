@@ -1,0 +1,176 @@
+{
+  "info": {
+    "name": "Hermes OrderFlow",
+    "description": "Order Service e Inventory Service. Suba o stack com `docker compose up --build -d` antes de rodar qualquer request. Use o environment `hermes-orderflow.postman_environment.json` junto com esta collection.\n\nNOTA IMPORTANTE: hoje não existe endpoint para criar um novo SKU do zero — `reserve`/`release`/`replenish` exigem que o item já exista na tabela `stock_items`. Para testar o fluxo de inventory-service, insira uma linha manualmente antes:\n\n```\ndocker exec -it orderflow-postgres psql -U postgres -d inventory -c \"INSERT INTO stock_items (sku, available, reserved, minimum_quantity, updated_at) VALUES ('sku-demo', 100, 0, 5, now());\"\n```",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "order_base_url", "value": "http://localhost:8080" },
+    { "key": "inventory_base_url", "value": "http://localhost:8081" },
+    { "key": "order_id", "value": "" },
+    { "key": "customer_id", "value": "" },
+    { "key": "product_id", "value": "" },
+    { "key": "sku", "value": "sku-demo" }
+  ],
+  "item": [
+    {
+      "name": "Order Service",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "url": "{{order_base_url}}/health"
+          }
+        },
+        {
+          "name": "Place Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('order_id', body.order_id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{order_base_url}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": \"{{customer_id}}\",\n  \"items\": [\n    {\n      \"product_id\": \"{{product_id}}\",\n      \"quantity\": 2,\n      \"price\": 5000\n    }\n  ]\n}"
+            },
+            "description": "Preencha as variáveis customer_id e product_id da collection com UUIDs válidos (ex: gerados em https://www.uuidgenerator.net/, ou clique em 'Auto-generate a UUID' se o Postman oferecer). price é em centavos."
+          }
+        },
+        {
+          "name": "Get Order By ID",
+          "request": {
+            "method": "GET",
+            "url": "{{order_base_url}}/orders/{{order_id}}"
+          }
+        },
+        {
+          "name": "List Orders",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{order_base_url}}/orders?limit=10&offset=0",
+              "host": ["{{order_base_url}}"],
+              "path": ["orders"],
+              "query": [
+                { "key": "limit", "value": "10" },
+                { "key": "offset", "value": "0" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Confirm Order",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{order_base_url}}/orders/confirm",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_id\": \"{{order_id}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Cancel Order",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{order_base_url}}/orders/cancel",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_id\": \"{{order_id}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Ship Order",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{order_base_url}}/orders/ship",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_id\": \"{{order_id}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Inventory Service",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "url": "{{inventory_base_url}}/health"
+          }
+        },
+        {
+          "name": "Get Stock By SKU",
+          "request": {
+            "method": "GET",
+            "url": "{{inventory_base_url}}/stock/{{sku}}"
+          }
+        },
+        {
+          "name": "List Low Stock",
+          "request": {
+            "method": "GET",
+            "url": "{{inventory_base_url}}/stock/low"
+          }
+        },
+        {
+          "name": "Reserve Stock",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{inventory_base_url}}/stock/reserve",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"{{sku}}\",\n  \"quantity\": 5\n}"
+            },
+            "description": "O SKU precisa já existir em stock_items — veja a nota na descrição da collection."
+          }
+        },
+        {
+          "name": "Release Stock",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{inventory_base_url}}/stock/release",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"{{sku}}\",\n  \"quantity\": 5\n}"
+            }
+          }
+        },
+        {
+          "name": "Replenish Stock",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{inventory_base_url}}/stock/replenish",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"{{sku}}\",\n  \"quantity\": 10\n}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

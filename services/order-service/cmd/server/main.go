@@ -88,6 +88,7 @@ func main() {
 	orderRoutes := r.Group("/orders")
 	{
 		orderRoutes.POST("", orderHandler.PlaceOrder)
+		orderRoutes.GET("", orderHandler.ListOrders)
 		orderRoutes.POST("/confirm", orderHandler.ConfirmOrder)
 		orderRoutes.POST("/cancel", orderHandler.CancelOrder)
 		orderRoutes.POST("/ship", orderHandler.ShipOrder)

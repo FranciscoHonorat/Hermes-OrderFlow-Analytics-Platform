@@ -7,6 +7,7 @@
   "variable": [
     { "key": "order_base_url", "value": "http://localhost:8080" },
     { "key": "inventory_base_url", "value": "http://localhost:8081" },
+    { "key": "cdc_connector_base_url", "value": "http://localhost:8082" },
     { "key": "order_id", "value": "" },
     { "key": "customer_id", "value": "" },
     { "key": "product_id", "value": "" },
@@ -169,6 +170,19 @@
               "raw": "{\n  \"sku\": \"{{sku}}\",\n  \"quantity\": 10\n}"
             }
           }
+        }
+      ]
+    },
+    {
+      "name": "cdc-connector",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "url": "{{cdc_connector_base_url}}/health"
+          },
+          "description": "cdc-connector não tem API de negócio — ele só drena a tabela outbox de order-service e inventory-service e publica no Kafka a cada POLL_INTERVAL (2s por padrão). Este é o único endpoint HTTP que ele expõe."
         }
       ]
     }

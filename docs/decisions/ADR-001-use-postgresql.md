@@ -144,3 +144,4 @@ exclusivas para desenvolvimento.
 - ADR-003 — Uso de Transactional Outbox
 - ADR-004 — Uso de Kafka
 - ADR-005 — Shared Kernel entre bounded contexts
+- ADR-006 — cdc-connector como relay de polling do Outbox

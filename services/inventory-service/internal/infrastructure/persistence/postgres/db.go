@@ -2,43 +2,15 @@ package postgres
 
 import (
 	"context"
-	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	sharedpg "github.com/FranciscoHonorat/ordemflow/shared/postgres"
 )
 
-type DB struct {
-	Pool *pgxpool.Pool
-}
+// DB e NewConnection são um re-export do shared kernel (ver ADR-005): a
+// conexão Postgres é idêntica em todo bounded context, então a
+// implementação vive uma única vez em shared/postgres.
+type DB = sharedpg.DB
 
 func NewConnection(ctx context.Context, dsn string) (*DB, error) {
-	config, err := pgxpool.ParseConfig(dsn)
-	if err != nil {
-		return nil, err
-	}
-
-	config.MaxConns = 25
-	config.MinConns = 5
-	config.MaxConnLifetime = 30 * time.Minute
-
-	pool, err := pgxpool.NewWithConfig(ctx, config)
-	if err != nil {
-		return nil, err
-	}
-
-	pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	if err := pool.Ping(pingCtx); err != nil {
-		pool.Close()
-		return nil, err
-	}
-
-	return &DB{Pool: pool}, nil
-}
-
-func (db *DB) Close() {
-	if db.Pool != nil {
-		db.Pool.Close()
-	}
+	return sharedpg.NewConnection(ctx, dsn)
 }

@@ -14,6 +14,11 @@ func NewProducer(brokers []string, clientID string) (*Producer, error) {
 	cl, err := kgo.NewClient(
 		kgo.SeedBrokers(brokers...),
 		kgo.ClientID(clientID),
+		// Sem isso, publicar no primeiro evento de um tópico que ainda não
+		// existe falha com UNKNOWN_TOPIC_OR_PARTITION mesmo com
+		// auto.create.topics.enable=true no broker — o cliente kgo não
+		// pede criação automática por padrão.
+		kgo.AllowAutoTopicCreation(),
 	)
 	if err != nil {
 		return nil, err

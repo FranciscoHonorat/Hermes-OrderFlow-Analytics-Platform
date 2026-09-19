@@ -38,9 +38,8 @@ tabela `outbox` na mesma transação que persiste o agregado.
 
 Um processo separado — o `cdc-connector` — é responsável por ler as
 linhas não processadas da tabela `outbox` e publicá-las no Kafka,
-marcando-as como processadas após a confirmação do broker. Esse processo
-ainda não está implementado; a persistência do outbox foi construída
-para sustentá-lo.
+marcando-as como processadas após a confirmação do broker (ver
+ADR-006).
 
 O contrato do outbox (`Row`, `Repository`) e sua implementação em
 PostgreSQL vivem em `shared/outbox`, reaproveitados por todo bounded
@@ -93,9 +92,10 @@ registrado como evolução possível do `cdc-connector`.
 
 ### Custos
 
-- Introduz um processo adicional (`cdc-connector`) responsável por
-  drenar a tabela outbox — enquanto ele não existir, os eventos
-  gravados na tabela nunca são publicados.
+- Introduz um processo adicional (`cdc-connector`, ver ADR-006)
+  responsável por drenar a tabela outbox — se ele ficar fora do ar, os
+  eventos gravados na tabela acumulam sem serem publicados (nenhum é
+  perdido, mas a entrega fica pausada).
 - Entrega é at-least-once: o relay pode publicar o mesmo evento mais de
   uma vez em caso de falha entre a publicação e o `MarkProcessed`.
   Consumidores precisam ser idempotentes.
@@ -119,9 +119,9 @@ agregado.
         ↓
     COMMIT
 
-O `cdc-connector` (ainda não implementado) usará `FetchUnprocessed` e
-`MarkProcessed`, também definidos em `shared/outbox.Repository`, para
-drenar essa tabela e publicar no Kafka.
+O `cdc-connector` (ADR-006) usa `FetchUnprocessed` e `MarkProcessed`,
+também definidos em `shared/outbox.Repository`, para drenar essa
+tabela e publicar no Kafka.
 
 ## Security Considerations
 
@@ -136,3 +136,4 @@ necessidade de criptografia em repouso ou mascaramento de campos.
 - ADR-002 — Uso de Hexagonal Architecture
 - ADR-004 — Uso de Kafka
 - ADR-005 — Shared Kernel entre bounded contexts
+- ADR-006 — cdc-connector como relay de polling do Outbox

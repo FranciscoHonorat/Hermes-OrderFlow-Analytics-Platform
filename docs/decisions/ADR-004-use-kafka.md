@@ -102,9 +102,22 @@ não é adequado — a decisão de infraestrutura (Kafka self-hosted em
 Kubernetes vs. MSK gerenciado) fica em aberto e deve ser revisitada
 quando o deploy em nuvem for tratado.
 
-Nenhum serviço ainda publica eventos de fato: o producer existe em
-`shared/messaging/kafka`, mas só será exercitado quando o
-`cdc-connector` for implementado (ver ADR-003).
+O `cdc-connector` (ADR-006) é hoje o único processo que publica de
+fato no Kafka, usando `shared/messaging/kafka.Producer`. Dois problemas
+de configuração só apareceram quando ele foi implementado e tentou
+publicar pela primeira vez (ver LEARNING-005):
+
+- `KAFKA_ADVERTISED_LISTENERS` no `docker-compose.yml` tinha os dois
+  listeners (`PLAINTEXT` e `PLAINTEXT_HOST`) na mesma porta (9092), o
+  que faz o broker recusar subir — ele ficava em crash-loop
+  silenciosamente porque nada antes do `cdc-connector` jamais havia
+  tentado se conectar de fato. Corrigido separando as portas (9092
+  interno, 9093 para acesso do host).
+- O cliente `kgo` usado pelo `Producer` não solicitava criação
+  automática de tópico por padrão; publicar no primeiro evento de um
+  tópico novo falhava com `UNKNOWN_TOPIC_OR_PARTITION` mesmo com
+  `auto.create.topics.enable=true` no broker. Corrigido com
+  `kgo.AllowAutoTopicCreation()`.
 
 ## Security Considerations
 
@@ -119,3 +132,4 @@ restringindo quais serviços podem publicar e consumir de cada um.
 - ADR-002 — Uso de Hexagonal Architecture
 - ADR-003 — Uso de Transactional Outbox
 - ADR-005 — Shared Kernel entre bounded contexts
+- ADR-006 — cdc-connector como relay de polling do Outbox

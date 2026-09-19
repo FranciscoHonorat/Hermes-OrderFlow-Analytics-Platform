@@ -123,19 +123,42 @@ serviço, sem publicação.
 
     shared/
       events/       (BaseEvent, DomainEvent)
-      messaging/kafka/  (Producer, Serializer, EventPublisher)
+      messaging/kafka/  (Producer)
       outbox/       (Repository, PostgresRepository)
-        ↑                ↑
-    order-service    inventory-service
-    (domain/event/*  (internal/domain/event/*
-     compõe          compõe
-     shared.BaseEvent) shared.BaseEvent)
+      postgres/     (DB, NewConnection)
+        ↑                ↑                ↑
+    order-service    inventory-service    cdc-connector
+    (domain/event/*  (internal/domain/    (relay.OutboxReader,
+     compõe           event/* compõe      relay.Publisher — usa
+     shared.BaseEvent) shared.BaseEvent)  outbox e kafka direto)
 
-Todo novo bounded context (analytics-service, cdc-connector, o futuro
-user/admin) deve compor `shared/events.BaseEvent` em seus eventos de
-domínio e, se adotar o Transactional Outbox, usar
-`shared/outbox.Repository` através de sua própria porta
-`application/port/output.OutboxRepository`.
+Todo novo bounded context (analytics-service, o futuro user/admin)
+deve compor `shared/events.BaseEvent` em seus eventos de domínio e, se
+adotar o Transactional Outbox, usar `shared/outbox.Repository` através
+de sua própria porta `application/port/output.OutboxRepository`.
+
+## Update (2026-09-19) — shared/postgres e remoção do EventPublisher
+
+Ao implementar o `cdc-connector` (ADR-006), um quarto pacote entrou no
+shared kernel pela regra dos três: `shared/postgres`, com o `DB`/
+`NewConnection` que order-service e inventory-service já tinham cada
+um a sua cópia idêntica, e que o cdc-connector também precisava. Cada
+serviço mantém seu próprio `postgres.DB`/`NewConnection` locais como
+alias de tipo para `shared/postgres`, seguindo o mesmo padrão já usado
+para `output.OutboxRepository`.
+
+No mesmo momento, `EventPublisher` e `Serializer` foram removidos de
+`shared/messaging/kafka`. Eles nunca chegaram a ser usados: a interface
+`Event` (`EventType()`/`ResourceID()`) que `EventPublisher.Publish`
+esperava não é implementada por nenhum evento de domínio real (que
+implementam `events.DomainEvent`, com `EventName()`/`AggregateId()`) —
+uma discrepância que só ficou visível quando o `cdc-connector` foi
+escrito e revelou que a publicação real não parte de um evento Go a
+serializar, e sim de uma linha do outbox cujo `Payload` já é o JSON
+serializado desde que a aplicação gravou o evento (ver ADR-003,
+LEARNING-004). O único primitivo realmente necessário é
+`Producer.Publish(topic, key, value []byte)`, que continua em
+`shared/messaging/kafka`.
 
 ## Security Considerations
 
@@ -150,3 +173,4 @@ um único ponto de implementação.
 - ADR-002 — Uso de Hexagonal Architecture
 - ADR-003 — Uso de Transactional Outbox
 - ADR-004 — Uso de Kafka
+- ADR-006 — cdc-connector como relay de polling do Outbox

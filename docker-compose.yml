@@ -35,11 +35,17 @@ services:
     depends_on:
       - zookeeper
     ports:
-      - "9093:9092"
+      - "9093:9093"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9092
+      # PLAINTEXT (porta 9092) é para tráfego dentro da rede do compose
+      # (order-service, inventory-service, cdc-connector usam "kafka:9092").
+      # PLAINTEXT_HOST (porta 9093) é para acesso a partir do host. As duas
+      # precisam de portas de container diferentes — colocar ambas em 9092
+      # faz o broker recusar subir ("two listeners on the same port").
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9093
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -126,6 +132,37 @@ services:
       DB_SSLMODE: disable
     ports:
       - "8081:8081"
+
+  cdc-connector:
+    build:
+      context: .
+      dockerfile: services/cdc-connector/Dockerfile
+    container_name: cdc-connector
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      order-migrate:
+        condition: service_completed_successfully
+      inventory-migrate:
+        condition: service_completed_successfully
+    environment:
+      APP_ENV: development
+      HTTP_PORT: 8082
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_SSLMODE: disable
+      SOURCES: order-service:orderflow,inventory-service:inventory
+      MESSAGING_BROKER: kafka:9092
+      MESSAGING_CLIENT_ID: cdc-connector
+      POLL_INTERVAL: 2s
+      POLL_BATCH_SIZE: 50
+    ports:
+      - "8082:8082"
 
 volumes:
   postgres_data:

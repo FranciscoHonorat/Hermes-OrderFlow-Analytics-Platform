@@ -1,0 +1,278 @@
+openapi: 3.0.3
+info:
+  title: user-service API
+  description: >
+    API do bounded context de identidade (Hermes OrderFlow) —
+    autenticação (JWT/HS256), CRUD de usuários e papéis admin/user
+    (ver ADR-007).
+  version: "1.0.0"
+servers:
+  - url: http://localhost:8083
+    description: docker-compose local
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      tags: [Health]
+      responses:
+        "200":
+          description: Serviço saudável
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: healthy }
+                  timestamp: { type: string, format: date-time }
+                  system: { type: string, example: user-service }
+
+  /auth/register:
+    post:
+      summary: Autorregistro de usuário
+      description: >
+        O papel (`role`) é sempre forçado para "user" no servidor,
+        independentemente do que for enviado — o cliente nunca pode
+        se autopromover a admin por este endpoint.
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RegisterInput" }
+      responses:
+        "201": { $ref: "#/components/responses/MessageOK" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /auth/login:
+    post:
+      summary: Login
+      description: >
+        A resposta não inclui dados do usuário (email/role) — use
+        GET /users/me com o token retornado para obter o perfil.
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoginInput" }
+      responses:
+        "200":
+          description: Login bem-sucedido
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LoginResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401":
+          description: Email ou senha inválidos (mesma mensagem para ambos os casos, deliberadamente — evita enumeração de contas)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403":
+          description: Conta desativada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /users/me:
+    get:
+      summary: Perfil do usuário autenticado
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Perfil do usuário
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserDTO" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /users:
+    get:
+      summary: Listar todos os usuários (admin)
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Lista de usuários (array vazio se nenhum)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/UserDTO" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /users/{id}:
+    get:
+      summary: Buscar usuário por ID (admin)
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Usuário encontrado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserDTO" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /users/{id}/role:
+    patch:
+      summary: Trocar o papel de um usuário (admin)
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ChangeRoleInput" }
+      responses:
+        "200": { $ref: "#/components/responses/MessageOK" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /users/{id}/activate:
+    post:
+      summary: Ativar um usuário (admin)
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { $ref: "#/components/responses/MessageOK" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /users/{id}/deactivate:
+    post:
+      summary: Desativar um usuário (admin)
+      description: >
+        Não há hoje uma invariante que impeça desativar o último
+        admin restante (ver ADR-007, risco aberto R7 na estratégia
+        de QA).
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { $ref: "#/components/responses/MessageOK" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    UserRole:
+      type: string
+      enum: [admin, user]
+
+    UserDTO:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        role: { $ref: "#/components/schemas/UserRole" }
+        active: { type: boolean }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    RegisterInput:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+
+    LoginResponse:
+      type: object
+      properties:
+        access_token: { type: string }
+        expires_at: { type: string, format: date-time }
+
+    ChangeRoleInput:
+      type: object
+      required: [role]
+      properties:
+        role: { $ref: "#/components/schemas/UserRole" }
+
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+
+  responses:
+    MessageOK:
+      description: Operação concluída
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message: { type: string }
+    BadRequest:
+      description: Corpo malformado ou campo obrigatório ausente
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unauthorized:
+      description: Token ausente, inválido ou expirado
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Forbidden:
+      description: Token válido, mas sem permissão (não-admin em rota admin)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Usuário não encontrado
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    UnprocessableEntity:
+      description: Regra de negócio violada
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    InternalError:
+      description: Erro interno
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }

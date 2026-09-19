@@ -1,0 +1,263 @@
+openapi: 3.0.3
+info:
+  title: order-service API
+  description: >
+    API do bounded context de pedidos (Hermes OrderFlow). Publica
+    eventos de domínio via Transactional Outbox (ver ADR-003); o
+    cdc-connector os entrega ao Kafka de forma assíncrona.
+  version: "1.0.0"
+servers:
+  - url: http://localhost:8080
+    description: docker-compose local
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      tags: [Health]
+      responses:
+        "200":
+          description: Serviço saudável
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  time:
+                    type: string
+                    format: date-time
+
+  /orders:
+    post:
+      summary: Colocar um novo pedido
+      tags: [Orders]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderInput"
+      responses:
+        "201":
+          description: Pedido criado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  order_id:
+                    type: string
+                    format: uuid
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+    get:
+      summary: Listar pedidos
+      tags: [Orders]
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: customer_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: Filtra por cliente; formato de UUID inválido retorna 400.
+      responses:
+        "200":
+          description: Lista de pedidos (array vazio se não houver nenhum)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OrderDTO"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /orders/{id}:
+    get:
+      summary: Buscar pedido por ID
+      tags: [Orders]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Pedido encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderDTO"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /orders/confirm:
+    post:
+      summary: Confirmar um pedido
+      description: >
+        Recebe o ID do pedido no corpo da requisição, não como path
+        param — decisão deliberada de design já existente no serviço,
+        documentada aqui tal como implementada.
+      tags: [Orders]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderIDRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/MessageOK"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /orders/cancel:
+    post:
+      summary: Cancelar um pedido
+      tags: [Orders]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderIDRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/MessageOK"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /orders/ship:
+    post:
+      summary: Marcar um pedido como enviado
+      tags: [Orders]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderIDRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/MessageOK"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+components:
+  schemas:
+    OrderStatus:
+      type: string
+      enum: [PENDING, CONFIRMED, SHIPPED, DELIVERED, CANCELLED, PAID, PLACED]
+
+    ItemDTO:
+      type: object
+      properties:
+        product_id: { type: string, format: uuid }
+        quantity: { type: integer }
+        price:
+          type: integer
+          format: int64
+          description: Preço unitário, em centavos.
+
+    OrderDTO:
+      type: object
+      description: >
+        Comportamento real do serviço hoje: `currency` é sempre
+        "USD" e `items` é sempre um array vazio na leitura
+        (GET /orders e GET /orders/{id}), independente do que foi
+        efetivamente pedido — a query de leitura não faz join com a
+        tabela de itens. Documentado aqui como está, não como
+        deveria ser.
+      properties:
+        id: { type: string, format: uuid }
+        customer_id: { type: string, format: uuid }
+        status: { $ref: "#/components/schemas/OrderStatus" }
+        total: { type: integer, format: int64 }
+        currency: { type: string, example: USD }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ItemDTO" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    CreateOrderItemInput:
+      type: object
+      properties:
+        product_id: { type: string, format: uuid }
+        quantity: { type: integer }
+        price:
+          type: integer
+          format: int64
+          description: Preço unitário, em centavos.
+
+    CreateOrderInput:
+      type: object
+      properties:
+        customer_id: { type: string, format: uuid }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/CreateOrderItemInput" }
+      description: >
+        Nenhum campo tem validação de binding no transporte HTTP hoje
+        — falhas de validação de negócio (pedido vazio, preço/moeda
+        inválidos) surgem como 422, não 400.
+
+    OrderIDRequest:
+      type: object
+      required: [order_id]
+      properties:
+        order_id: { type: string, format: uuid }
+
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+
+  responses:
+    MessageOK:
+      description: Operação concluída
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message: { type: string }
+    BadRequest:
+      description: Corpo malformado ou ID inválido
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Recurso não encontrado
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    UnprocessableEntity:
+      description: Regra de negócio violada
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    InternalError:
+      description: Erro interno
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }

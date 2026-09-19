@@ -1,0 +1,153 @@
+openapi: 3.0.3
+info:
+  title: inventory-service API
+  description: >
+    API do bounded context de estoque (Hermes OrderFlow). Publica
+    eventos de domínio via Transactional Outbox (ver ADR-003).
+  version: "1.0.0"
+servers:
+  - url: http://localhost:8081
+    description: docker-compose local
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      tags: [Health]
+      responses:
+        "200":
+          description: Serviço saudável
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: healthy }
+                  timestamp: { type: string, format: date-time }
+                  system: { type: string, example: inventory-service }
+
+  /stock/reserve:
+    post:
+      summary: Reservar quantidade de um SKU
+      tags: [Stock]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockMutationInput" }
+      responses:
+        "200": { $ref: "#/components/responses/MessageOK" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /stock/release:
+    post:
+      summary: Liberar quantidade previamente reservada de um SKU
+      tags: [Stock]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockMutationInput" }
+      responses:
+        "200": { $ref: "#/components/responses/MessageOK" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /stock/replenish:
+    post:
+      summary: Repor quantidade disponível de um SKU
+      tags: [Stock]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockMutationInput" }
+      responses:
+        "200": { $ref: "#/components/responses/MessageOK" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /stock/low:
+    get:
+      summary: Listar itens com estoque abaixo do mínimo
+      tags: [Stock]
+      responses:
+        "200":
+          description: Lista de itens em baixo estoque (array vazio se nenhum)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/StockDTO" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /stock/{sku}:
+    get:
+      summary: Buscar item de estoque por SKU
+      tags: [Stock]
+      parameters:
+        - name: sku
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Item encontrado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StockDTO" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+components:
+  schemas:
+    StockDTO:
+      type: object
+      properties:
+        sku: { type: string }
+        available: { type: integer }
+        reserved: { type: integer }
+        minimum_quantity: { type: integer }
+        updated_at: { type: string, format: date-time }
+
+    StockMutationInput:
+      type: object
+      required: [sku, quantity]
+      properties:
+        sku: { type: string }
+        quantity: { type: integer }
+
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+
+  responses:
+    MessageOK:
+      description: Operação concluída
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message: { type: string }
+    BadRequest:
+      description: Corpo malformado ou campo obrigatório ausente
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: SKU não encontrado
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    UnprocessableEntity:
+      description: Regra de negócio violada (ex. estoque insuficiente)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    InternalError:
+      description: Erro interno
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }

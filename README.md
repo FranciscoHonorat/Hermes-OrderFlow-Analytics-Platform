@@ -131,6 +131,7 @@ A documentação de arquitetura do projeto está em:
 
 - [ARCHITECTURE.md](ARCHITECTURE.md)
 - [orderflow-roadmap.md](orderflow-roadmap.md)
+- [Documentação da API (OpenAPI/Swagger)](docs/openapi/index.html)
 
 ---
 

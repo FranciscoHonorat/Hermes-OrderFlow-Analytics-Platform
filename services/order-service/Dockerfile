@@ -2,10 +2,15 @@ FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
 
-COPY go.mod go.sum* ./
+# O build context é a raiz do repositório (ver docker-compose.yml) porque o
+# go.mod deste serviço depende de shared/ via `replace ../../shared` — o
+# Docker não enxerga nada fora do build context.
+COPY shared/ ./shared/
+COPY services/order-service/ ./services/order-service/
+
+WORKDIR /app/services/order-service
 RUN go mod download
 
-COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /order-service ./cmd/server
 
 FROM alpine:3.20

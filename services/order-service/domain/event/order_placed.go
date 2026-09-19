@@ -4,12 +4,13 @@ import (
 	"time"
 
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/domain/valueobject"
+	"github.com/FranciscoHonorat/ordemflow/shared/events"
 )
 
-var _ DomainEvent = (*OrderPlaced)(nil)
+var _ events.DomainEvent = (*OrderPlaced)(nil)
 
 type OrderPlaced struct {
-	BaseEvent
+	events.BaseEvent
 	CustomerID  string
 	TotalAmount valueobject.Money
 	ItemCount   int
@@ -17,7 +18,7 @@ type OrderPlaced struct {
 
 func NewOrderPlaced(orderID, customerID string, total valueobject.Money, item int, occurredAt time.Time) OrderPlaced {
 	return OrderPlaced{
-		BaseEvent:   NewBaseEvent("order.placed", orderID, occurredAt),
+		BaseEvent:   events.NewBaseEvent("order.placed", orderID, occurredAt),
 		CustomerID:  customerID,
 		TotalAmount: total,
 		ItemCount:   item,

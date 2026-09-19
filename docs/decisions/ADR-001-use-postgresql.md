@@ -143,3 +143,4 @@ exclusivas para desenvolvimento.
 - ADR-002 — Uso de Hexagonal Architecture
 - ADR-003 — Uso de Transactional Outbox
 - ADR-004 — Uso de Kafka
+- ADR-005 — Shared Kernel entre bounded contexts

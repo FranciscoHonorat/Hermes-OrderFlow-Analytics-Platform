@@ -1,4 +1,4 @@
-go 1.25.0
+go 1.25.11
 
 use (
 	// ./services/analytics-service
@@ -6,5 +6,5 @@ use (
 	./services/inventory-service
 	// ./services/notification-service
 	./services/order-service
-	// ./shared
+	./shared
 )

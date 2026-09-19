@@ -1,11 +1,10 @@
 package output
 
 import (
-	"context"
-
-	"github.com/FranciscoHonorat/ordemflow/services/order-service/domain/event"
+	"github.com/FranciscoHonorat/ordemflow/shared/outbox"
 )
 
-type OutboxRepository interface {
-	SaveEvents(ctx context.Context, events []event.DomainEvent) error
-}
+// OutboxRepository é a porta usada pela aplicação; a definição real do
+// contrato vive em shared/outbox, reaproveitada por todo bounded context
+// que grava eventos de domínio na tabela outbox.
+type OutboxRepository = outbox.Repository

@@ -8,6 +8,7 @@ import (
 	domainErrors "github.com/FranciscoHonorat/ordemflow/services/order-service/domain/domain-errors"
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/domain/event"
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/domain/valueobject"
+	"github.com/FranciscoHonorat/ordemflow/shared/events"
 )
 
 type Order struct {
@@ -19,7 +20,7 @@ type Order struct {
 	status     valueobject.OrderStatus
 	createdAt  time.Time
 	updatedAt  time.Time
-	events     []event.DomainEvent
+	events     []events.DomainEvent
 }
 
 func NewOrder(id valueobject.OrderID, customerID valueobject.CustomerID) (*Order, error) {
@@ -171,17 +172,17 @@ func (o *Order) Cancel(now time.Time, reason string) error {
 	return nil
 }
 
-func (o *Order) addEvent(evt event.DomainEvent) {
+func (o *Order) addEvent(evt events.DomainEvent) {
 	o.events = append(o.events, evt)
 }
 
-func (o *Order) DomainEvents() []event.DomainEvent {
-	cp := make([]event.DomainEvent, len(o.events))
+func (o *Order) DomainEvents() []events.DomainEvent {
+	cp := make([]events.DomainEvent, len(o.events))
 	copy(cp, o.events)
 	return cp
 }
 
-func (o *Order) PullEvents() []event.DomainEvent {
+func (o *Order) PullEvents() []events.DomainEvent {
 	events := o.DomainEvents()
 	o.ClearEvents()
 	return events

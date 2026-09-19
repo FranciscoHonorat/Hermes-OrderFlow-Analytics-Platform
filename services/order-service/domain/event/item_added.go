@@ -5,12 +5,13 @@ import (
 
 	domainErrors "github.com/FranciscoHonorat/ordemflow/services/order-service/domain/domain-errors"
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/domain/valueobject"
+	"github.com/FranciscoHonorat/ordemflow/shared/events"
 )
 
-var _ DomainEvent = (*OrderPlaced)(nil)
+var _ events.DomainEvent = (*OrderAdded)(nil)
 
 type OrderAdded struct {
-	BaseEvent
+	events.BaseEvent
 	OrderID    valueobject.OrderID
 	ProductID  valueobject.ProductID
 	Quantity   valueobject.Quantity
@@ -20,7 +21,7 @@ type OrderAdded struct {
 
 func NewOrderAdded(orderID valueobject.OrderID, productID valueobject.ProductID, quantity valueobject.Quantity, unitPrice, totalPrice valueobject.Money, occurredAt time.Time) OrderAdded {
 	return OrderAdded{
-		BaseEvent:  NewBaseEvent("order.item_added", orderID.String(), occurredAt),
+		BaseEvent:  events.NewBaseEvent("order.item_added", orderID.String(), occurredAt),
 		OrderID:    orderID,
 		ProductID:  productID,
 		Quantity:   quantity,

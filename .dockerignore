@@ -1,0 +1,13 @@
+.git
+.github
+.idea
+.vscode
+bin
+tmp
+vendor
+node_modules
+*.log
+*.md
+docs
+infra/k8s
+orderflow_design_justifications.pdf

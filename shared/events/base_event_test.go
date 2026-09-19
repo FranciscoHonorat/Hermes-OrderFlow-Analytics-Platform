@@ -1,10 +1,10 @@
-package event_test
+package events_test
 
 import (
 	"testing"
 	"time"
 
-	"github.com/FranciscoHonorat/ordemflow/services/order-service/domain/event"
+	"github.com/FranciscoHonorat/ordemflow/shared/events"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,7 +35,7 @@ func TestBaseEvent(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				baseEvent := event.NewBaseEvent(tt.eventName, tt.aggregateId, tt.occurredAt)
+				baseEvent := events.NewBaseEvent(tt.eventName, tt.aggregateId, tt.occurredAt)
 
 				if tt.expectError {
 					assert.Error(t, baseEvent.Validate())

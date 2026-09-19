@@ -1,15 +1,19 @@
 package event
 
-import "time"
+import (
+	"time"
 
-var _ DomainEvent = (*OrderConfirmed)(nil)
+	"github.com/FranciscoHonorat/ordemflow/shared/events"
+)
+
+var _ events.DomainEvent = (*OrderConfirmed)(nil)
 
 type OrderConfirmed struct {
-	BaseEvent
+	events.BaseEvent
 }
 
 func NewOrderConfirmed(orderID string, occurredAt time.Time) OrderConfirmed {
 	return OrderConfirmed{
-		BaseEvent: NewBaseEvent("order.confirmed", orderID, occurredAt),
+		BaseEvent: events.NewBaseEvent("order.confirmed", orderID, occurredAt),
 	}
 }

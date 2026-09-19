@@ -5,9 +5,9 @@ DOCKER_COMPOSE=docker compose
 # go.work is a multi-module workspace: `go <cmd> ./...` only works from
 # inside one of these module directories, never from the repo root. Every
 # target below loops over them explicitly instead.
-MODULES=shared services/order-service services/inventory-service services/cdc-connector
+MODULES=shared services/order-service services/inventory-service services/cdc-connector services/user-service
 
-.PHONY: help build run test test-integration fmt tidy docker-build docker-build-inventory docker-build-cdc docker-up docker-down
+.PHONY: help build run test test-integration fmt tidy docker-build docker-build-inventory docker-build-cdc docker-build-user docker-up docker-down
 
 help:
 	@echo "Targets:"
@@ -20,6 +20,7 @@ help:
 	@echo "  docker-build        Build the order-service docker image"
 	@echo "  docker-build-inventory  Build the inventory-service docker image"
 	@echo "  docker-build-cdc    Build the cdc-connector docker image"
+	@echo "  docker-build-user   Build the user-service docker image"
 	@echo "  docker-up           Docker compose up (builds images)"
 	@echo "  docker-down         Docker compose down"
 
@@ -60,6 +61,9 @@ docker-build-inventory:
 
 docker-build-cdc:
 	docker build -t hermes-orderflow/cdc-connector -f services/cdc-connector/Dockerfile .
+
+docker-build-user:
+	docker build -t hermes-orderflow/user-service -f services/user-service/Dockerfile .
 
 docker-up:
 	$(DOCKER_COMPOSE) up --build -d

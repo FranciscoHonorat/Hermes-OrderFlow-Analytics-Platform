@@ -6,5 +6,6 @@ use (
 	./services/inventory-service
 	// ./services/notification-service
 	./services/order-service
+	./services/user-service
 	./shared
 )

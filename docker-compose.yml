@@ -80,6 +80,20 @@ services:
       - "-database=postgres://postgres:postgres@postgres:5432/inventory?sslmode=disable"
       - "up"
 
+  user-migrate:
+    image: migrate/migrate:v4.17.1
+    container_name: user-migrate
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./services/user-service/migrations:/migrations
+    command:
+      - "-path=/migrations"
+      - "-database=postgres://postgres:postgres@postgres:5432/users?sslmode=disable"
+      - "up"
+
   order-service:
     build:
       context: .
@@ -133,6 +147,34 @@ services:
     ports:
       - "8081:8081"
 
+  user-service:
+    build:
+      context: .
+      dockerfile: services/user-service/Dockerfile
+    container_name: user-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      user-migrate:
+        condition: service_completed_successfully
+    environment:
+      APP_ENV: development
+      HTTP_PORT: 8083
+      HTTP_MODE: release
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: users
+      DB_SSLMODE: disable
+      JWT_SECRET: dev-only-secret-change-me
+      JWT_EXPIRY: 1h
+      BOOTSTRAP_ADMIN_EMAIL: admin@example.com
+      BOOTSTRAP_ADMIN_PASSWORD: admin123
+    ports:
+      - "8083:8083"
+
   cdc-connector:
     build:
       context: .
@@ -148,6 +190,8 @@ services:
         condition: service_completed_successfully
       inventory-migrate:
         condition: service_completed_successfully
+      user-migrate:
+        condition: service_completed_successfully
     environment:
       APP_ENV: development
       HTTP_PORT: 8082
@@ -156,7 +200,7 @@ services:
       DB_USER: postgres
       DB_PASSWORD: postgres
       DB_SSLMODE: disable
-      SOURCES: order-service:orderflow,inventory-service:inventory
+      SOURCES: order-service:orderflow,inventory-service:inventory,user-service:users
       MESSAGING_BROKER: kafka:9092
       MESSAGING_CLIENT_ID: cdc-connector
       POLL_INTERVAL: 2s

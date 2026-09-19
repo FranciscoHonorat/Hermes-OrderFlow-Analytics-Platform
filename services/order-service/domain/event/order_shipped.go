@@ -1,11 +1,15 @@
 package event
 
-import "time"
+import (
+	"time"
 
-var _ DomainEvent = (*OrderShipped)(nil)
+	"github.com/FranciscoHonorat/ordemflow/shared/events"
+)
+
+var _ events.DomainEvent = (*OrderShipped)(nil)
 
 type OrderShipped struct {
-	BaseEvent
+	events.BaseEvent
 	ShipmentID     string
 	Carrier        string
 	TrackingNumber string
@@ -13,7 +17,7 @@ type OrderShipped struct {
 
 func NewOrderShipped(orderID, shipmentID, carrier, trackingNumber string, occurredAt time.Time) OrderShipped {
 	return OrderShipped{
-		BaseEvent:      NewBaseEvent("order.shipped", orderID, occurredAt),
+		BaseEvent:      events.NewBaseEvent("order.shipped", orderID, occurredAt),
 		ShipmentID:     shipmentID,
 		Carrier:        carrier,
 		TrackingNumber: trackingNumber,

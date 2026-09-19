@@ -11,6 +11,7 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./infra/docker/postgres-init:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d orderflow"]
       interval: 5s
@@ -34,21 +35,69 @@ services:
     depends_on:
       - zookeeper
     ports:
-      - "9093:9092"
+      - "9093:9093"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9092
+      # PLAINTEXT (porta 9092) é para tráfego dentro da rede do compose
+      # (order-service, inventory-service, cdc-connector usam "kafka:9092").
+      # PLAINTEXT_HOST (porta 9093) é para acesso a partir do host. As duas
+      # precisam de portas de container diferentes — colocar ambas em 9092
+      # faz o broker recusar subir ("two listeners on the same port").
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9093
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
 
+  order-migrate:
+    image: migrate/migrate:v4.17.1
+    container_name: order-migrate
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./services/order-service/migrations:/migrations
+    command:
+      - "-path=/migrations"
+      - "-database=postgres://postgres:postgres@postgres:5432/orderflow?sslmode=disable"
+      - "up"
+
+  inventory-migrate:
+    image: migrate/migrate:v4.17.1
+    container_name: inventory-migrate
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./services/inventory-service/migrations:/migrations
+    command:
+      - "-path=/migrations"
+      - "-database=postgres://postgres:postgres@postgres:5432/inventory?sslmode=disable"
+      - "up"
+
+  user-migrate:
+    image: migrate/migrate:v4.17.1
+    container_name: user-migrate
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./services/user-service/migrations:/migrations
+    command:
+      - "-path=/migrations"
+      - "-database=postgres://postgres:postgres@postgres:5432/users?sslmode=disable"
+      - "up"
+
   order-service:
     build:
-      context: ./services/order-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/order-service/Dockerfile
     container_name: order-service
     restart: unless-stopped
     depends_on:
@@ -56,6 +105,8 @@ services:
         condition: service_healthy
       kafka:
         condition: service_started
+      order-migrate:
+        condition: service_completed_successfully
     environment:
       APP_ENV: development
       HTTP_PORT: 8080
@@ -71,6 +122,91 @@ services:
       MESSAGING_WRITE_TIMEOUT: 5s
     ports:
       - "8080:8080"
+
+  inventory-service:
+    build:
+      context: .
+      dockerfile: services/inventory-service/Dockerfile
+    container_name: inventory-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      inventory-migrate:
+        condition: service_completed_successfully
+    environment:
+      APP_ENV: development
+      HTTP_PORT: 8081
+      HTTP_MODE: release
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: inventory
+      DB_SSLMODE: disable
+    ports:
+      - "8081:8081"
+
+  user-service:
+    build:
+      context: .
+      dockerfile: services/user-service/Dockerfile
+    container_name: user-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      user-migrate:
+        condition: service_completed_successfully
+    environment:
+      APP_ENV: development
+      HTTP_PORT: 8083
+      HTTP_MODE: release
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: users
+      DB_SSLMODE: disable
+      JWT_SECRET: dev-only-secret-change-me
+      JWT_EXPIRY: 1h
+      BOOTSTRAP_ADMIN_EMAIL: admin@example.com
+      BOOTSTRAP_ADMIN_PASSWORD: admin123
+    ports:
+      - "8083:8083"
+
+  cdc-connector:
+    build:
+      context: .
+      dockerfile: services/cdc-connector/Dockerfile
+    container_name: cdc-connector
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      order-migrate:
+        condition: service_completed_successfully
+      inventory-migrate:
+        condition: service_completed_successfully
+      user-migrate:
+        condition: service_completed_successfully
+    environment:
+      APP_ENV: development
+      HTTP_PORT: 8082
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_SSLMODE: disable
+      SOURCES: order-service:orderflow,inventory-service:inventory,user-service:users
+      MESSAGING_BROKER: kafka:9092
+      MESSAGING_CLIENT_ID: cdc-connector
+      POLL_INTERVAL: 2s
+      POLL_BATCH_SIZE: 50
+    ports:
+      - "8082:8082"
 
 volumes:
   postgres_data:

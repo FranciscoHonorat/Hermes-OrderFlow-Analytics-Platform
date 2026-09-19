@@ -11,9 +11,10 @@ import (
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/application/command"
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/application/port/output"
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/domain/entity"
-	"github.com/FranciscoHonorat/ordemflow/services/order-service/domain/event"
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/domain/repository"
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/domain/valueobject"
+	"github.com/FranciscoHonorat/ordemflow/shared/events"
+	"github.com/FranciscoHonorat/ordemflow/shared/outbox"
 	"github.com/stretchr/testify/require"
 )
 
@@ -47,11 +48,19 @@ func (m *MockOrderRepository) FindByID(ctx context.Context, id valueobject.Order
 }
 
 type MockOutboxRepository struct {
-	SavedEvents []event.DomainEvent
+	SavedEvents []events.DomainEvent
 }
 
-func (m *MockOutboxRepository) SaveEvents(ctx context.Context, events []event.DomainEvent) error {
-	m.SavedEvents = append(m.SavedEvents, events...)
+func (m *MockOutboxRepository) SaveEvents(ctx context.Context, evts []events.DomainEvent) error {
+	m.SavedEvents = append(m.SavedEvents, evts...)
+	return nil
+}
+
+func (m *MockOutboxRepository) FetchUnprocessed(ctx context.Context, limit int) ([]outbox.Row, error) {
+	return nil, nil
+}
+
+func (m *MockOutboxRepository) MarkProcessed(ctx context.Context, ids []uuid.UUID) error {
 	return nil
 }
 

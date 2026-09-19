@@ -1,0 +1,11 @@
+-- Cada bounded context possui seu próprio banco de dados dentro da mesma
+-- instância de Postgres local (ver ARCHITECTURE.md, seção 3: Bounded
+-- Contexts). Isso evita colisão de schema entre serviços que, por
+-- coincidência, usam o mesmo nome de tabela (ex: "outbox" em order-service
+-- e inventory-service).
+--
+-- Scripts em /docker-entrypoint-initdb.d só rodam na primeira inicialização
+-- do container (volume vazio). Se o volume "postgres_data" já existir de
+-- uma execução anterior, recrie-o (`docker compose down -v`) para que este
+-- script seja aplicado.
+CREATE DATABASE inventory;

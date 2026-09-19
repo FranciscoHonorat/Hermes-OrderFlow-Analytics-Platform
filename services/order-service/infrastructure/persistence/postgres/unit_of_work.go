@@ -6,6 +6,7 @@ import (
 
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/application/port/output"
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/domain/repository"
+	"github.com/FranciscoHonorat/ordemflow/shared/outbox"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -59,5 +60,5 @@ func (r *repositoryProvider) OrderRepository() repository.OrderRepository {
 }
 
 func (r *repositoryProvider) OutboxRepository() output.OutboxRepository {
-	return NewOutboxRepositoryFromTx(r.tx)
+	return outbox.NewPostgresRepository(r.tx)
 }

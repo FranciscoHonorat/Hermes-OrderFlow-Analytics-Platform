@@ -13,6 +13,7 @@ import (
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/infrastructure/http/middleware"
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/infrastructure/persistence"
 	"github.com/FranciscoHonorat/ordemflow/services/order-service/infrastructure/persistence/postgres"
+	"github.com/FranciscoHonorat/ordemflow/shared/outbox"
 	"github.com/gin-gonic/gin"
 )
 
@@ -42,7 +43,7 @@ func main() {
 	orderMapper := postgres.NewOrderMapper()
 
 	orderRepo := postgres.NewOrderRepository(db, orderMapper)
-	outboxRepo := postgres.NewOutboxRepository(db)
+	outboxRepo := outbox.NewPostgresRepository(db.Pool)
 	uow := postgres.NewUnitOfWork(db)
 
 	_ = orderRepo
@@ -87,6 +88,7 @@ func main() {
 	orderRoutes := r.Group("/orders")
 	{
 		orderRoutes.POST("", orderHandler.PlaceOrder)
+		orderRoutes.GET("", orderHandler.ListOrders)
 		orderRoutes.POST("/confirm", orderHandler.ConfirmOrder)
 		orderRoutes.POST("/cancel", orderHandler.CancelOrder)
 		orderRoutes.POST("/ship", orderHandler.ShipOrder)

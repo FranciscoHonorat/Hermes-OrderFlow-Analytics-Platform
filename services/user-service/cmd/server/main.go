@@ -91,16 +91,14 @@ func main() {
 		authGroup.POST("/login", authHandler.Login)
 	}
 
-	verifier := &tokenVerifierAdapter{issuer: issuer}
-
 	authenticated := r.Group("/users")
-	authenticated.Use(middleware.Auth(verifier))
+	authenticated.Use(middleware.Auth(issuer))
 	{
 		authenticated.GET("/me", userHandler.GetMe)
 	}
 
 	admin := r.Group("/users")
-	admin.Use(middleware.Auth(verifier), middleware.RequireRole(valueobject.RoleNameAdmin))
+	admin.Use(middleware.Auth(issuer), middleware.RequireRole(valueobject.RoleNameAdmin))
 	{
 		admin.GET("", userHandler.ListUsers)
 		admin.GET("/:id", userHandler.GetUserByID)

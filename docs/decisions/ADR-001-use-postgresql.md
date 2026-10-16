@@ -5,7 +5,7 @@
 
 ## Context
 
-O Hermes OrderFlow é uma plataforma educacional de logística e gestão de
+O Hermes OrderFlow é uma plataforma de logística e gestão de
 pedidos, com um domínio financeiro.
 
 O Order Service precisa persistir informações relacionadas aos pedidos,

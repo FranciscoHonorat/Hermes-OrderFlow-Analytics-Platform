@@ -120,6 +120,7 @@ services:
       MESSAGING_BROKER: kafka:9092
       MESSAGING_CLIENT_ID: order-service
       MESSAGING_WRITE_TIMEOUT: 5s
+      JWT_SECRET: dev-only-secret-change-me
     ports:
       - "8080:8080"
 
@@ -144,6 +145,7 @@ services:
       DB_PASSWORD: postgres
       DB_NAME: inventory
       DB_SSLMODE: disable
+      JWT_SECRET: dev-only-secret-change-me
     ports:
       - "8081:8081"
 
@@ -207,6 +209,22 @@ services:
       POLL_BATCH_SIZE: 50
     ports:
       - "8082:8082"
+
+  swagger-ui:
+    image: swaggerapi/swagger-ui:v5.17.14
+    container_name: orderflow-swagger-ui
+    restart: unless-stopped
+    volumes:
+      - ./docs/openapi:/usr/share/nginx/html/openapi:ro
+    environment:
+      URLS: >-
+        [
+          {"url": "/openapi/order-service.yaml", "name": "Order Service"},
+          {"url": "/openapi/inventory-service.yaml", "name": "Inventory Service"},
+          {"url": "/openapi/user-service.yaml", "name": "User Service"}
+        ]
+    ports:
+      - "8090:8080"
 
 volumes:
   postgres_data:

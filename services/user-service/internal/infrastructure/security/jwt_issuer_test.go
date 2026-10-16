@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/FranciscoHonorat/ordemflow/services/user-service/internal/infrastructure/security"
+	"github.com/FranciscoHonorat/ordemflow/shared/auth"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -32,7 +33,7 @@ func TestJWTIssuer(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = other.Verify(token)
-		assert.ErrorIs(t, err, security.ErrInvalidToken)
+		assert.ErrorIs(t, err, auth.ErrInvalidToken)
 	})
 
 	t.Run("Test Verify rejects expired token", func(t *testing.T) {
@@ -42,13 +43,13 @@ func TestJWTIssuer(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = issuer.Verify(token)
-		assert.ErrorIs(t, err, security.ErrInvalidToken)
+		assert.ErrorIs(t, err, auth.ErrInvalidToken)
 	})
 
 	t.Run("Test Verify rejects malformed token", func(t *testing.T) {
 		issuer := security.NewJWTIssuer("test-secret", time.Hour)
 
 		_, err := issuer.Verify("not-a-token")
-		assert.ErrorIs(t, err, security.ErrInvalidToken)
+		assert.ErrorIs(t, err, auth.ErrInvalidToken)
 	})
 }

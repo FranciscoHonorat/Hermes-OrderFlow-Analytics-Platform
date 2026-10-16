@@ -3,6 +3,7 @@ package middleware
 import (
 	"net/http"
 
+	"github.com/FranciscoHonorat/ordemflow/shared/auth"
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,7 +20,7 @@ func RequireRole(roles ...string) gin.HandlerFunc {
 			return
 		}
 
-		claims, ok := value.(Claims)
+		claims, ok := value.(auth.Claims)
 		if !ok {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing authentication"})
 			return

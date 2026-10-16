@@ -3,18 +3,14 @@ package middleware
 import (
 	"net/http"
 
+	"github.com/FranciscoHonorat/ordemflow/shared/auth"
 	"github.com/gin-gonic/gin"
 )
 
 const ClaimsKey = "auth_claims"
 
-type Claims struct {
-	UserID string
-	Role   string
-}
-
 type TokenVerifier interface {
-	Verify(token string) (Claims, error)
+	Verify(token string) (auth.Claims, error)
 }
 
 func Auth(verifier TokenVerifier) gin.HandlerFunc {

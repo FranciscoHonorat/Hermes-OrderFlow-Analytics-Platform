@@ -7,16 +7,17 @@ import (
 	"testing"
 
 	"github.com/FranciscoHonorat/ordemflow/services/user-service/internal/infrastructure/http/middleware"
+	"github.com/FranciscoHonorat/ordemflow/shared/auth"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
 
 type fakeVerifier struct {
-	claims middleware.Claims
+	claims auth.Claims
 	err    error
 }
 
-func (f fakeVerifier) Verify(token string) (middleware.Claims, error) {
+func (f fakeVerifier) Verify(token string) (auth.Claims, error) {
 	return f.claims, f.err
 }
 
@@ -29,7 +30,7 @@ func TestAuth(t *testing.T) {
 		verifier       middleware.TokenVerifier
 		expectedStatus int
 	}{
-		{"Valid token", "Bearer good-token", fakeVerifier{claims: middleware.Claims{UserID: "user-1", Role: "user"}}, http.StatusOK},
+		{"Valid token", "Bearer good-token", fakeVerifier{claims: auth.Claims{UserID: "user-1", Role: "user"}}, http.StatusOK},
 		{"Missing header", "", fakeVerifier{}, http.StatusUnauthorized},
 		{"Malformed header", "good-token", fakeVerifier{}, http.StatusUnauthorized},
 		{"Invalid token", "Bearer bad-token", fakeVerifier{err: errors.New("invalid")}, http.StatusUnauthorized},

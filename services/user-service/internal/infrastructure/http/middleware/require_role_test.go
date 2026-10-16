@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/FranciscoHonorat/ordemflow/services/user-service/internal/infrastructure/http/middleware"
+	"github.com/FranciscoHonorat/ordemflow/shared/auth"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
@@ -15,12 +16,12 @@ func TestRequireRole(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		claims         *middleware.Claims
+		claims         *auth.Claims
 		allowedRoles   []string
 		expectedStatus int
 	}{
-		{"Allowed role", &middleware.Claims{Role: "admin"}, []string{"admin"}, http.StatusOK},
-		{"Disallowed role", &middleware.Claims{Role: "user"}, []string{"admin"}, http.StatusForbidden},
+		{"Allowed role", &auth.Claims{Role: "admin"}, []string{"admin"}, http.StatusOK},
+		{"Disallowed role", &auth.Claims{Role: "user"}, []string{"admin"}, http.StatusForbidden},
 		{"No claims in context", nil, []string{"admin"}, http.StatusUnauthorized},
 	}
 

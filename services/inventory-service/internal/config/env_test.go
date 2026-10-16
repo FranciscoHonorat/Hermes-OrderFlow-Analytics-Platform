@@ -73,4 +73,29 @@ func TestEnv(t *testing.T) {
 			assert.Error(t, err)
 		})
 	})
+
+	t.Run("Test loadJWTConfig requires JWT_SECRET", func(t *testing.T) {
+		t.Run("Missing secret fails closed", func(t *testing.T) {
+			value, exists := os.LookupEnv("JWT_SECRET")
+			t.Cleanup(func() {
+				if exists {
+					os.Setenv("JWT_SECRET", value)
+				} else {
+					os.Unsetenv("JWT_SECRET")
+				}
+			})
+
+			os.Unsetenv("JWT_SECRET")
+			_, err := loadJWTConfig()
+			assert.Error(t, err)
+		})
+
+		t.Run("Valid secret", func(t *testing.T) {
+			t.Setenv("JWT_SECRET", "test-secret")
+
+			cfg, err := loadJWTConfig()
+			assert.NoError(t, err)
+			assert.Equal(t, "test-secret", cfg.Secret)
+		})
+	})
 }

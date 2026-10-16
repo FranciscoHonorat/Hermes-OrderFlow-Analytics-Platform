@@ -145,6 +145,16 @@ uma senha hardcoded em migration.
   admin restante (lockout). Adiado deliberadamente, registrado como
   risco aberto na QA strategy.
 
+## Update (2026-09-19) — reuso por order-service e inventory-service
+
+O JWT emitido aqui deixou de ser exclusivo do `user-service`:
+`order-service` e `inventory-service` agora exigem o mesmo token em
+todas as rotas (exceto `/health`), fechando a lacuna que a ADR-008
+registrava em "Security Considerations". A lógica de `Issue`/`Verify`
+foi extraída para `shared/auth` (ver ADR-005 "Update") — o
+`user-service` continua sendo o único emissor de token, os outros dois
+só verificam.
+
 ## Related Decisions
 
 - ADR-002 — Uso de Hexagonal Architecture

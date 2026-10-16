@@ -54,3 +54,15 @@ R4 — API may return an incorrect contract
 R5 — Concurrency may lead to an inconsistent state
 R6 — Internal errors may leak information
 R7 — Future changes may break existing behavior
+R8 — API may accept requests without a valid JWT (added 2026-09-19, see ADR-005 "Update" — shared/auth)
+
+## Coverage so far (2026-09-19 update)
+
+- `infrastructure/http/middleware/auth_test.go`: valid token → 200,
+  missing/malformed header → 401, invalid token → 401 (mitigates R8).
+  Same pattern already used in `user-service`'s own middleware test.
+- `config/env_test.go`: `loadJWTConfig` fails closed when `JWT_SECRET`
+  is unset (mitigates R8's config half).
+- Manually verified against the real `docker-compose` stack: `GET
+  /orders` without a token → 401; with a JWT issued by `user-service`
+  → 200 (cross-service token verification, not just same-service).

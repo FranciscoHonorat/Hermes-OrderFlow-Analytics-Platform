@@ -13,6 +13,7 @@ import (
 	"github.com/FranciscoHonorat/ordemflow/services/inventory-service/internal/infrastructure/http/middleware"
 	"github.com/FranciscoHonorat/ordemflow/services/inventory-service/internal/infrastructure/persistence"
 	"github.com/FranciscoHonorat/ordemflow/services/inventory-service/internal/infrastructure/persistence/postgres"
+	"github.com/FranciscoHonorat/ordemflow/services/inventory-service/internal/infrastructure/security"
 	"github.com/gin-gonic/gin"
 )
 
@@ -63,7 +64,10 @@ func main() {
 
 	r.GET("/health", gin.WrapF(healthHandler.HealthCheck))
 
+	verifier := security.NewJWTVerifier(cfg.JWT.Secret)
+
 	stockGroup := r.Group("/stock")
+	stockGroup.Use(middleware.Auth(verifier))
 	{
 		stockGroup.POST("/reserve", stockHandler.ReserveStock)
 		stockGroup.POST("/release", stockHandler.ReleaseStock)

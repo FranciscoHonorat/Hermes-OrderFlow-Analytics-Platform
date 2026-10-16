@@ -1,6 +1,6 @@
 module github.com/FranciscoHonorat/ordemflow/services/order-service
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/FranciscoHonorat/ordemflow/shared v0.0.0-00010101000000-000000000000
@@ -9,7 +9,6 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/stretchr/testify v1.12.1
-	github.com/twmb/franz-go v1.21.6
 )
 
 replace github.com/FranciscoHonorat/ordemflow/shared => ../../shared
@@ -39,8 +38,6 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/pierrec/lz4/v4 v4.1.26 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.59.1 // indirect
 	github.com/stretchr/objx v0.5.3 // indirect

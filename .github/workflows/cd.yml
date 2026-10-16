@@ -25,7 +25,7 @@ jobs:
           - user-service
           - cdc-connector
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
